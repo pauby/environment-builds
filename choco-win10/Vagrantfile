@@ -1,0 +1,159 @@
+﻿# Vagrant File (Vagrantfile)
+# http://docs.vagrantup.com/v2/vagrantfile/index.html
+
+Vagrant.require_version ">= 2.0.0"
+
+# require './vagrant-provision-reboot-plugin'
+# require 'json'
+
+#if File.exists?(File.expand_path "./package.json")
+#    packages = JSON.parse(File.read(File.expand_path "./package.json"))
+#      puts packages
+#end
+
+# Need the vagrant reload plugin to reboot the box
+#unless Vagrant.has_plugin?("vagrant-reload")
+#  raise 'vagrant-reload plugin is not installed! Please install it with: vagrant plugin install vagrant-reload'
+#end
+
+# http://docs.vagrantup.com/v2/vagrantfile/machine_settings.html
+Vagrant.configure("2") do |config|
+
+    config.vm.define "chocowin10" do |chocowin10|
+
+        chocowin10.vm.box = "StefanScherer/windows_10"
+
+        config.vm.provider :virtualbox do |v, override|
+            # Show the GUI
+            v.gui = true
+            # 2GB RAM
+            v.customize ["modifyvm", :id, "--memory", "2048"]
+            # 2 CPUs
+            v.customize ["modifyvm", :id, "--cpus", "2"]
+            # Video RAM is 32 MB
+            v.customize ["modifyvm", :id, "--vram", 32]
+            # For better DNS resolution
+            v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+            # No audo
+            v.customize ["modifyvm", :id, "--audio", "none"]
+            # Clipboard enabled
+            v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+            v.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
+            # For performance
+            v.customize ["modifyvm", :id, "--usb", "off"]
+            # Huge performance gain here
+            v.linked_clone = true if Vagrant::VERSION >= '1.8.0'
+        end
+
+        # network does not work in Hyper-V
+        #config.vm.network "public_network", bridge: "vEthernet (Default Switch)"
+
+        #  config.vm.provider :hyperv do |h|
+        #    # 4GB RAM
+        #    h.memory = 512
+        #	h.maxmemory = 2048
+        #    # 1 CPUs
+        #    h.cpus = 1
+        #	# Integration Services
+        #    h.vm_integration_services = {
+        #      guest_service_interface: true,
+        #      heartbeat: true,
+        #      key_value_pair_exchange: true,
+        #      shutdown: true,
+        #      time_synchronization: true,
+        #      vss: true
+        #    }
+        #    # Huge performance gain here
+        #    h.differencing_disk = true
+        #  end
+
+        # timeout of waiting for image to stop running - may be a deprecated setting
+        chocowin10.windows.halt_timeout = 20
+        # username/password for accessing the image
+        chocowin10.winrm.username = "vagrant"
+        chocowin10.winrm.password = "vagrant"
+        # explicitly tell Vagrant the guest is Windows
+        chocowin10.vm.guest = :windows
+        chocowin10.vm.communicator = "winrm"
+
+        # Synced folders - http://docs.vagrantup.com/v2/synced-folders/
+        # A synced folder is a fancy term for shared folders - it takes a folder on
+        # the host and shares it with the guest (vagrant) image. The entire folder
+        # where the Vagrantfile is located is always shared as `c:\vagrant` (the
+        # naming of this directory being `vagrant` is just a coincedence).
+        # Share `packages` directory as `C:\packages`
+        # Turn off the default vagrant synced folder as they don't work
+        chocowin10.vm.synced_folder "packages", "c:/packages", create: true, disabled: false
+        chocowin10.vm.synced_folder "/users/paul/sync/chocolatey/internalized-packages", "/internalized-packages"
+        #chocowin10.vm.synced_folder "packages", "c:/packages", "type": "rsync", create: true
+        #chocowin10.vm.synced_folder "temp", "/Users/vagrant/AppData/Local/Temp/chocolatey"
+        # not recommended for sharing, it may have issues with `vagrant sandbox rollback`
+        #chocowin10.vm.synced_folder "chocolatey", "/ProgramData/chocolatey"
+
+        # Port forward WinRM / RDP
+        chocowin10.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true
+        chocowin10.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true
+
+        # Provisioners - http://docs.vagrantup.com/v2/provisioning/
+        #chocowin10.vm.provision "shell", inline: "New-Item (Join-Path -Path $env:SYSTEMDRIVE -ChildPath 'packages') -ItemType Directory -Force | Out-Null", name: "Creating remote packages folder"
+        #chocowin10.vm.provision "file", source: "../shell/win-build-toolkit.psm1", destination: "c:/tmp/win-build-toolkit.psm1"
+        #chocowin10.vm.provision "file", source: "./packages", destination: "c:/packages", run: "always"
+
+        #  packages.each do |package|
+        #    puts package
+        #    puts package['name']
+        #    # In this specific vagrant usage, we are using the shell provisioner
+        #    # http://docs.vagrantup.com/v2/provisioning/shell.html
+        #    chocowin10.vm.provision :shell, :path => "../shell/PrepareWindows.ps1", :powershell_elevated_interactive => true
+        #    # Installing .NET 4 is not needed on Win 10
+        #    #chocowin10.vm.provision :shell, :path => "../shell/InstallNet4.ps1", :powershell_elevated_interactive => true
+        #    chocowin10.vm.provision :shell, :path => "../shell/InstallChocolatey.ps1", :powershell_elevated_interactive => true
+        #    chocowin10.vm.provision :shell, :path => "../shell/NotifyGuiAppsOfEnvironmentChanges.ps1", :powershell_elevated_interactive => true
+
+        #    if package['install'] == true
+        #      chocowin10.vm.provision "shell", path: "../shell/Manage-ChocoPackage.ps1", args: "-Mode install -Name #{package['name']} -ChocoDebug", powershell_elevated_interactive: true, name: "Installing package #{package['name']}"
+        #      if package['rebootafterinstall'] == true
+        #        chocowin10.vm.provision "reload"
+        #      else
+        #        sleep 10
+        #      end
+        #    end
+
+        #    if package['uninstall'] == true
+        #      chocowin10.vm.provision "shell", path: "../shell/Manage-ChocoPackage.ps1", args: "-Mode uninstall -Name #{package['name']} -ChocoDebug", powershell_elevated_interactive: true, name: "Uninstalling package #{package['name']}"
+        #      if package['rebootafteruninstall'] == true
+        #        chocowin10.vm.provision "reload"
+        #      end
+        #    end
+        #  end # packages
+        #$packageTestScript = <<SCRIPT
+        #setx.exe trigger 1  # run arbitrary win32 application so LASTEXITCODE is 0
+        #$ErrorActionPreference = "Stop"
+        #$env:PATH +=";$($env:SystemDrive)\\ProgramData\\chocolatey\\bin"
+        ## https://github.com/chocolatey/choco/issues/512
+        #$validExitCodes = @(0, 1605, 1614, 1641, 3010)
+        #
+        #Write-Output "Testing package if a line is uncommented."
+        ## THIS IS WHAT YOU CHANGE
+        ## - uncomment one of the two and edit it appropriately
+        ## - See the README for details
+        ##choco.exe install -fdvy INSERT_NAME --version INSERT_VERSION  --allow-downgrade
+        ##choco.exe install -fdvy INSERT_NAME  --allow-downgrade --source "'c:\\packages;http://chocolatey.org/api/v2/'"
+
+        #$exitCode = $LASTEXITCODE
+
+        #Write-Host "Exit code was $exitCode"
+        #if ($validExitCodes -contains $exitCode) {
+        #  Exit 0
+        #}
+
+        #Exit $exitCode
+        #SCRIPT
+
+        #  if Vagrant::VERSION < '1.8.0'
+        #    chocowin10.vm.provision :shell, :inline => $packageTestScript
+        #  else
+        #    chocowin10.vm.provision :shell, :inline => $packageTestScript, :powershell_elevated_interactive => true
+        #  end
+    end
+end
