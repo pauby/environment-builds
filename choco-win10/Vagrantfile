@@ -99,6 +99,22 @@ Vagrant.configure("2") do |config|
         #chocowin10.vm.provision "file", source: "../shell/win-build-toolkit.psm1", destination: "c:/tmp/win-build-toolkit.psm1"
         #chocowin10.vm.provision "file", source: "./packages", destination: "c:/packages", run: "always"
 
+        if Vagrant::VERSION < '1.8.0'
+            chocowin10.vm.provision :shell, :path => "shell/InstallDeps.ps1"
+            chocowin10.vm.provision :shell, :path => "shell/InstallNet4.ps1"
+            chocowin10.vm.provision :shell, :path => "shell/InstallChocolatey.ps1"
+            chocowin10.vm.provision :shell, :path => "shell/PrepareWindows.ps1"
+            chocowin10.vm.provision :shell, :path => "shell/NotifyGuiAppsOfEnvironmentChanges.ps1"
+            chocowin10.vm.provision :shell, :path => "shell/InstallApps.ps1"
+        else
+            chocowin10.vm.provision :shell, :path => "shell/InstallDeps.ps1", :powershell_elevated_interactive => true
+            chocowin10.vm.provision :shell, :path => "shell/InstallNet4.ps1", :powershell_elevated_interactive => true
+            chocowin10.vm.provision :shell, :path => "shell/InstallChocolatey.ps1", :powershell_elevated_interactive => true
+            chocowin10.vm.provision :shell, :path => "shell/PrepareWindows.ps1", :powershell_elevated_interactive => true
+            chocowin10.vm.provision :shell, :path => "shell/NotifyGuiAppsOfEnvironmentChanges.ps1", :powershell_elevated_interactive => true
+            chocowin10.vm.provision :shell, :path => "shell/InstallApps.ps1", :powershell_elevated_interactive => true
+        end
+
         #  packages.each do |package|
         #    puts package
         #    puts package['name']
