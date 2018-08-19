@@ -1,9 +1,10 @@
 [CmdletBinding()]
 Param (
     [string[]]
-    $Apps
+    $Package
 )
 
-$Apps | ForEach-Object {
+$Package | ForEach-Object {
+    Write-Output "Installing Chocolatey package '$_'."
     choco upgrade $_ -y --no-progress
 }
