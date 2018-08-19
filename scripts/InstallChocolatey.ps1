@@ -1,3 +1,9 @@
+[CmdletBinding()]
+Param (
+    [switch]
+    $UseLocalSource
+)
+
 # From https://chocolatey.org/install
 Set-ExecutionPolicy Bypass -Scope Process -Force
 iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
@@ -13,12 +19,11 @@ choco feature enable --name="'logEnvironmentValues'"
 choco config set cacheLocation $env:ALLUSERSPROFILE\choco-cache
 choco config set commandExecutionTimeoutSeconds 14400
 
-# Sources - Remove community repository
-#choco source remove --name="'chocolatey'"
+if ($UseLocalSource.IsPresent) {
+    # Sources - Add internal repositories
+    choco source add --name="'local'" --source="'\packages'" --priority="'1'" --bypass-proxy --allow-self-service
 
-# Sources - Add internal repositories
-choco source add --name="'local'" --source="'c:\packages'" --priority="'1'" --bypass-proxy --allow-self-service
-
-# Sources - change priority of community repository
-choco source remove --name="'chocolatey'"
-choco source add --name='chocolatey' --source='https://chocolatey.org/api/v2/' --priority='2' --bypass-proxy
+    # Sources - change priority of community repository
+    choco source remove --name="'chocolatey'"
+    choco source add --name='chocolatey' --source='https://chocolatey.org/api/v2/' --priority='2' --bypass-proxy
+}
