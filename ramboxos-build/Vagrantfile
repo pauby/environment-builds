@@ -73,20 +73,22 @@ Vagrant.configure("2") do |config|
         # In this specific vagrant usage, we are using the shell provisioner
         # http://docs.vagrantup.com/v2/provisioning/shell.html
         rbuild.vm.provision :shell, :path => "../scripts/ConfigureAutoLogin.ps1", privileged: false
+        rbuild.vm.provision :shell, :path => "../scripts/InstallBGInfo.ps1", privileged: false
         rbuild.vm.provision :shell, :path => "../scripts/PrepareWindows.ps1", privileged: false
         rbuild.vm.provision :shell, :path => "../scripts/InstallNet4.ps1", privileged: false
-        rbuild.vm.provision :shell, :path => "../scripts/InstallChocolatey.ps1", privileged: false
+        rbuild.vm.provision :shell, :path => "../scripts/InstallChocolatey.ps1", args = "-UseLocalSource", privileged: false
         rbuild.vm.provision :shell, :path => "../scripts/NotifyGuiAppsOfEnvironmentChanges.ps1", privileged: false
-        rbuild.vm.provision "shell", privileged: false, inline: <<-SHELL
-            choco source remove -n=chocolatey
-            choco source add -n=local -s="\\packages" -priority=1
-            choco source add -n=chocolatey -s="https://chocolatey.org/api/v2/" -priority=2
-        SHELL
+        # rbuild.vm.provision "shell", privileged: false, inline: <<-SHELL
+        #     choco source remove -n=chocolatey
+        #     choco source add -n=local -s="\\packages" -priority=1
+        #     choco source add -n=chocolatey -s="https://chocolatey.org/api/v2/" -priority=2
+        # SHELL
         rbuild.vm.provision :shell, :path => "../scripts/InstallStandardApps.ps1", privileged: false
-        rbuild.vm.provision "shell", privileged: false, inline: <<-SHELL
-            choco upgrade jdk8 -y
-            choco upgrade ruby -y
-            choco upgrade nodejs.install  -y
-        SHELL
+        rbuild.vm.provision :shell, :path => "../scripts/InstallChocoApps.ps1", args = "baretail, dotnetversiondetector, notepadplusplus.install, jdk8, ruby, nodejs.install", privileged: false
+        # rbuild.vm.provision "shell", privileged: false, inline: <<-SHELL
+        #     choco upgrade jdk8 -y
+        #     choco upgrade ruby -y
+        #     choco upgrade nodejs.install  -y
+        # SHELL
     end
 end
