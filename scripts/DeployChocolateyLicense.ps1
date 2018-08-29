@@ -1,8 +1,9 @@
 $licenseFileSourcePath = 'C:\license\bus-chocolatey.license.xml'
 $licenseDestinationPath = 'C:\ProgramData\chocolatey\license\chocolatey.license.xml'
 
-If (-Not (Test-Path $licenseDestinationPath)) {
-  New-Item -ItemType Directory -Path $licenseDestinationPath
+$path = Split-Path -Path $licenseDestinationPath -Parent
+If (-Not (Test-Path -Path $path)) {
+  New-Item -ItemType Directory -Path $path
 }
 
 If (-Not (Test-Path $licenseFileSourcePath)) {
