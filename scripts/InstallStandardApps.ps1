@@ -1,4 +1,4 @@
 
-@( 'baretail', 'dotnetversiondetector', 'notepadplusplus.install' ) | ForEach-Object {
-    choco upgrade $_ -y
+@( 'baretail', 'dotnetversiondetector', 'notepadplusplus.install', '7zip' ) | ForEach-Object {
+    choco upgrade $_ -y --no-progress
 }
