@@ -113,6 +113,10 @@ function New-AclObject {
     New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule($SamAccountName, $Permission, $Inheritance, $Propagation, $AccessControl)
 }
 
+if ($null -eq (Get-Command -Name 'choco.exe' -ErrorAction SilentlyContinue)) {
+    Write-Warning "Chocolatey not installed. Cannot install standard packages."
+    Exit 1
+}
 # Install Chocolatey.Server prereqs
 choco install IIS-WebServer --source windowsfeatures
 choco install IIS-ASPNET45 --source windowsfeatures
