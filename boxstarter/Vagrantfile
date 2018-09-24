@@ -1,0 +1,89 @@
+﻿# http://docs.vagrantup.com/v2/vagrantfile/machine_settings.html
+Vagrant.configure("2") do |config|
+
+  config.vm.define "win10", autostart: "false" do |win10|
+    win10.vm.box = "StefanScherer/windows_10"
+
+    win10.vm.provider :virtualbox do |v, override|
+      v.gui = true
+      v.memory = 2048
+      v.customize ["modifyvm", :id, "--cpus", "1"]
+      v.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]
+      v.customize ["modifyvm", :id, "--vram", 32]
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--audio", "none"]
+      v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+      v.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
+      v.customize ["modifyvm", :id, "--usb", "off"]
+      # Huge performance gain here
+      v.linked_clone = true if Vagrant::VERSION >= '1.8.0'
+    end
+
+    # https://www.vagrantup.com/docs/hyperv/configuration.html
+    # https://technet.microsoft.com/en-us/library/dn798297(v=ws.11).aspx
+    win10.vm.provider :hyperv do |v, override|
+      # 4GB RAM
+      v.memory = 2048
+      # 2 CPUs
+      v.cpus = 1
+      # The time in seconds to wait for the virtual machine to report an IP address
+      v.ip_address_timeout = 130
+      # Use differencing disk instead of cloning whole VHD
+      v.differencing_disk = true
+      v.vm_integration_services = {
+        guest_service_interface: true,
+        heartbeat: true,
+        key_value_pair_exchange: true,
+        shutdown: true,
+        time_synchronization: true,
+        vss: true
+      }
+    end
+
+    win10.windows.halt_timeout = 20
+    win10.vm.guest = :windows
+    win10.vm.communicator = "winrm"
+
+    # Share `packages` directory as `C:\packages`
+    win10.vm.synced_folder "../packages", "/packages"
+    win10.vm.synced_folder "../scripts", "/scripts"
+
+    # Port forward WinRM / RDP
+    # Vagrant 1.9.3 - if you run into Errno::EADDRNOTAVAIL (https://github.com/mitchellh/vagrant/issues/8395),
+    #  add host_ip: "127.0.0.1" for it to work
+    win10.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true #, host_ip: "127.0.0.1"
+    win10.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true #, host_ip: "127.0.0.1"
+    # Port forward SSH (ssh is forwarded by default in most versions of Vagrant,
+    # but be sure). This is not necessary if you are not using SSH, but it doesn't
+    # hurt anything to have it
+    #win10.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true #, host_ip: "127.0.0.1"
+
+    win10.vm.provision :shell, :path => "../scripts/ConfigureAutoLogin.ps1", privileged: false
+    win10.vm.provision :shell, :path => "../scripts/PrepareWindows.ps1", privileged: false
+    win10.vm.provision :shell, :path => "../scripts/ProvisionNetwork.ps1", privileged: false
+
+    # win10.vm.provision "shell", privileged: false, inline: <<-SHELL
+    #     setx.exe trigger 1  # run arbitrary win32 application so LASTEXITCODE is 0
+    #     $ErrorActionPreference = "Stop"
+    #     $env:PATH +=";$($env:SystemDrive)\\ProgramData\\chocolatey\\bin"
+    #     # https://github.com/chocolatey/choco/issues/512
+    #     $validExitCodes = @(0, 1605, 1614, 1641, 3010)
+
+    #     Write-Output "Testing package if a line is uncommented."
+    #     # THIS IS WHAT YOU CHANGE
+    #     # - uncomment one of the two and edit it appropriately
+    #     # - See the README for details
+    #     #choco.exe install -fdvy INSERT_NAME --version INSERT_VERSION  --allow-downgrade
+    #     #choco.exe install -fdvy INSERT_NAME  --allow-downgrade --source "'c:\\packages;http://chocolatey.org/api/v2/'"
+
+    #     $exitCode = $LASTEXITCODE
+
+    #     Write-Host "Exit code was $exitCode"
+    #     if ($validExitCodes -contains $exitCode) {
+    #     Exit 0
+    #     }
+
+    #     Exit $exitCode
+    # SHELL
+  end
+end
