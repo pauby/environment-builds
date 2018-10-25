@@ -29,12 +29,15 @@ Set-Service -Name wuauserv -StartupType Manual
 #Set-ExecutionPolicy Unrestricted
 
 # Ensure there is a profile file so we can get tab completion
-New-Item -ItemType Directory $(Split-Path $profile -Parent) -Force
-Set-Content -Path $profile -Encoding UTF8 -Value "" -Force
+Write-Host "Creating PowerShell profile for tab completion."
+$null = New-Item -ItemType Directory $(Split-Path $profile -Parent) -Force
+$null = Set-Content -Path $profile -Encoding UTF8 -Value "" -Force
 
-winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="2048"}'
+Write-Host "Updating Winrm Settings."
+$null = winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="2048"}'
 
 # Set Preferences
+Write-Host "Setting Windows Explorer preferences."
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer'
 $advancedKey = "$key\Advanced"
 Set-ItemProperty $advancedKey Hidden 1
