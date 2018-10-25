@@ -3,32 +3,6 @@ $appPoolName = 'ChocolateyServerAppPool'
 $sitePath = 'c:\tools\chocolatey.server'
 
 function Add-Acl {
-    <#
-    .SYNOPSIS
-    Set an ace on an object.
-    .DESCRIPTION
-    Set an ace, created using New-Acl, on an object.
-    .INPUTS
-        None
-    .OUTPUTS
-        System.Security.AccessControl.FileSecurity
-    .EXAMPLE
-    Add-Acl -Path 'C:\Windows\Notepad.exe' -AceObject $aceObj
-
-    Adds the access control entry object, $aceObj created using New-Acl, to 'C:\Windows\Notepad.exe'
-    .NOTES
-    Author  : Paul Broadwith (https://github.com/pauby)
-    Project : Oxygen (https://github.com/pauby/oxygen)
-    History : v1.0 - 22/04/18 - Initial
-
-    Code was created using https://technet.microsoft.com/en-us/library/ff730951.aspx as a basis.
-    .LINK
-        New-AclObject
-    .LINK
-        Set-Owner
-    .LINK
-        https://github.com/pauby/oxygen/blob/master/docs/add-acl.md
-    #>
     [CmdletBinding()]
     Param (
         # Path to the object to set the acl on.
@@ -50,33 +24,6 @@ function Add-Acl {
 }
 
 function New-AclObject {
-    <#
-    .SYNOPSIS
-        Creates a new ACL object.
-    .DESCRIPTION
-        Creates a new ACL object for use with module -Acl* functions.
-    .INPUTS
-        None
-    .OUTPUTS
-        System.Security.AccessControl.FileSystemAccessRule
-    .EXAMPLE
-        New-AclObject -SamAccountName 'testuser' -Permission 'Modify'
-
-        Creates an ACL object to Allow Modify permissions without inheritance or propogation for the samAccountName 'testuser'
-    .NOTES
-        Author  : Paul Broadwith (https://github.com/pauby)
-        Project : Oxygen (https://github.com/pauby/oxygen)
-        History : v1.0 - 20/04/18 - Initial
-                  v1.1 - 16/08/18 - Removed conversion of SamAccountName to NTAccount object. May only be needed for domain accounts.
-
-        Code was created using https://technet.microsoft.com/en-us/library/ff730951.aspx as a basis.
-    .LINK
-        Add-Acl
-    .LINK
-        Set-Owner
-    .LINK
-        https://github.com/pauby/oxygen/blob/master/docs/new-aclobject.md
-    #>
     [OutputType([System.Security.AccessControl.FileSystemAccessRule])]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'No state is being changed')]
     Param (
@@ -126,7 +73,6 @@ choco upgrade chocolatey.server -y
 
 # Step by step instructions here https://chocolatey.org/docs/how-to-set-up-chocolatey-server#setup-normally
 # Import the right modules
-#Import-Module IISAdministration
 Import-Module WebAdministration
 # Disable or remove the Default website
 Get-Website -Name 'Default Web Site' | Stop-Website
