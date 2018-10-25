@@ -1,2 +1,5 @@
-*/.vagrant/machines
-*/packages/
+**/.vagrant
+**/packages
+*.nupkg
+*.exe
+*.license.xml
