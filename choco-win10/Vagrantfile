@@ -1,4 +1,8 @@
-﻿# http://docs.vagrantup.com/v2/vagrantfile/machine_settings.html
+﻿unless Vagrant.has_plugin?("vagrant-reload")
+  raise 'vagrant-reload is not installed!'
+end
+
+# http://docs.vagrantup.com/v2/vagrantfile/machine_settings.html
 Vagrant.configure("2") do |config|
 
     config.vm.define "chocowin10" do |chocowin10|
@@ -44,7 +48,11 @@ Vagrant.configure("2") do |config|
         end
 
         # timeout of waiting for image to stop running - may be a deprecated setting
-        chocowin10.windows.halt_timeout = 20
+        # timeout of waiting for image to stop running - may be a deprecated setting
+        chocowin10.windows.halt_timeout = 60
+        # https://github.com/hashicorp/vagrant/issues/6430
+        chocowin10.winrm.retry_limit = 30
+        chocowin10.winrm.retry_delay = 10
         # username/password for accessing the image
         chocowin10.winrm.username = "vagrant"
         chocowin10.winrm.password = "vagrant"
@@ -52,9 +60,9 @@ Vagrant.configure("2") do |config|
         chocowin10.vm.guest = :windows
         chocowin10.vm.communicator = "winrm"
 
-
-        # Share `packages` directory as `C:\packages`
-        chocowin10.vm.synced_folder "c:\\choco-resources\\packages", "/packages"
+        chocowin10.vm.synced_folder "auto-install", "/auto-install"
+        chocowin10.vm.synced_folder "../packages", "/packages"
+        chocowin10.vm.synced_folder "../scripts", "/scripts"
         #chocowin10.vm.synced_folder "temp", "/Users/vagrant/AppData/Local/Temp/chocolatey"
         # not recommended for sharing, it may have issues with `vagrant sandbox rollback`
         #chocowin10.vm.synced_folder "chocolatey", "/ProgramData/chocolatey"
@@ -62,12 +70,12 @@ Vagrant.configure("2") do |config|
         # Port forward WinRM / RDP
         # Vagrant 1.9.3 - if you run into Errno::EADDRNOTAVAIL (https://github.com/mitchellh/vagrant/issues/8395),
         #  add host_ip: "127.0.0.1" for it to work
-        chocowin10.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true #, host_ip: "127.0.0.1"
-        chocowin10.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true #, host_ip: "127.0.0.1"
+        chocowin10.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true, host_ip: "127.0.0.1"
+        chocowin10.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
         # Port forward SSH (ssh is forwarded by default in most versions of Vagrant,
         # but be sure). This is not necessary if you are not using SSH, but it doesn't
         # hurt anything to have it
-        chocowin10.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true #, host_ip: "127.0.0.1"
+        chocowin10.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
 
         # Provisioners - http://docs.vagrantup.com/v2/provisioning/
         # In this specific vagrant usage, we are using the shell provisioner
