@@ -1,0 +1,57 @@
+unless Vagrant.has_plugin?("vagrant-reload")
+  raise 'vagrant-reload is not installed!'
+end
+
+Vagrant.configure("2") do |config|
+
+  config.vm.define "win2016" do |cfg|
+    cfg.vm.box = "StefanScherer/windows_2016"
+
+    cfg.windows.halt_timeout = 60
+    # https://github.com/hashicorp/vagrant/issues/6430
+    cfg.winrm.retry_limit = 30
+    cfg.winrm.retry_delay = 10
+
+    cfg.winrm.username = "vagrant"
+    cfg.winrm.password = "vagrant"
+    cfg.vm.guest = :windows
+    cfg.vm.communicator = "winrm"
+
+    cfg.vm.hostname = "win2016"
+    cfg.windows.set_work_network = true
+
+    cfg.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true, host_ip: "127.0.0.1"
+    cfg.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
+    cfg.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
+
+    cfg.vm.synced_folder "auto-install", "/auto-install"
+    cfg.vm.synced_folder "../packages", "/packages"
+    cfg.vm.synced_folder "../scripts", "/scripts"
+
+    cfg.vm.provider :virtualbox do |v, override|
+      override.vm.network :private_network, ip: "10.10.13.14"
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.gui = true
+      v.customize ["modifyvm", :id, "--vram", 32]
+      v.customize ["modifyvm", :id, "--memory", "1024"]
+      v.customize ["modifyvm", :id, "--audio", "none"]
+      v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+      v.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
+      v.customize ["modifyvm", :id, "--usb", "off"]
+      # linked clones for speed and size
+      v.linked_clone = true if Vagrant::VERSION >= '1.8.0'
+    end
+
+    cfg.vm.provision :shell, :path => "../scripts/ConfigureAutoLogin.ps1", privileged: false
+    cfg.vm.provision :shell, :path => "../scripts/PrepareWindows.ps1", privileged: false
+    cfg.vm.provision :shell, :path => "../scripts/InstallNet4.ps1", privileged: false
+    cfg.vm.provision :shell, :path => "../scripts/InstallChocolatey.ps1", privileged: false
+    cfg.vm.provision :shell, :path => "../scripts/NotifyGuiAppsOfEnvironmentChanges.ps1", privileged: false
+    cfg.vm.provision "shell", privileged: false, inline: <<-SHELL
+        choco source remove -n=chocolatey
+        choco source add -n=local -s="\\packages" -priority=1
+        choco source add -n=chocolatey -s="https://chocolatey.org/api/v2/" -priority=2
+    SHELL
+    cfg.vm.provision :shell, :path => "../scripts/InstallStandardApps.ps1", privileged: false
+  end
+end
