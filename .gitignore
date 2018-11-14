@@ -1,5 +1,9 @@
+#https://git-scm.com/docs/gitignore
 **/.vagrant
 **/packages
 *.nupkg
 *.exe
 *.license.xml
+# exclude the contents of the auto-install folder but include the readme
+**/auto-install
+!**/auto-install/readme.md
