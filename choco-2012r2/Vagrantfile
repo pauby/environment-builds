@@ -51,6 +51,7 @@ Vagrant.configure("2") do |config|
     # Share `packages` directory as `C:\packages`
     win2012r2.vm.synced_folder "auto-install", "/auto-install"
     win2012r2.vm.synced_folder "../packages", "/packages"
+    win2012r2.vm.synced_folder "../licenses", "/licenses"
     win2012r2.vm.synced_folder "../scripts", "/scripts"
 
     # Port forward WinRM / RDP
@@ -67,6 +68,14 @@ Vagrant.configure("2") do |config|
     win2012r2.vm.provision :shell, :path => "../scripts/PrepareWindows.ps1", privileged: false
     win2012r2.vm.provision :shell, :path => "../scripts/ProvisionNetwork.ps1", privileged: false
     win2012r2.vm.provision :shell, :path => "../scripts/InstallChocolatey.ps1", privileged: false, args: "-UseLocalSource"
+    win2012r2.vm.provision :shell, :path => "../scripts/ConfigureAutoLogin.ps1", privileged: false
+    win2012r2.vm.provision :shell, :path => "../scripts/NotifyGuiAppsOfEnvironmentChanges.ps1", privileged: false
+    win2012r2.vm.provision "shell", privileged: false, inline: <<-SHELL
+        choco source remove -n=chocolatey
+        choco source add -n=local -s="\\packages" -priority=1
+        choco source add -n=chocolatey -s="https://chocolatey.org/api/v2/" -priority=2
+        $null = New-Item -Path (Join-Path -Path $env:ChocolateyInstall -ChildPath 'license') -ItemType Directory
+    SHELL
     win2012r2.vm.provision :shell, :path => "../scripts/InstallStandardApps.ps1", privileged: false
     win2012r2.vm.provision :shell, :path => "../scripts/InstallBGInfo.ps1", privileged: false
 
