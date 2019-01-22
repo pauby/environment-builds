@@ -62,6 +62,7 @@ Vagrant.configure("2") do |config|
 
         chocowin10.vm.synced_folder "auto-install", "/auto-install"
         chocowin10.vm.synced_folder "../packages", "/packages"
+        chocowin10.vm.synced_folder "../licenses", "/licenses"
         chocowin10.vm.synced_folder "../scripts", "/scripts"
         #chocowin10.vm.synced_folder "temp", "/Users/vagrant/AppData/Local/Temp/chocolatey"
         # not recommended for sharing, it may have issues with `vagrant sandbox rollback`
@@ -89,8 +90,10 @@ Vagrant.configure("2") do |config|
             choco source remove -n=chocolatey
             choco source add -n=local -s="\\packages" -priority=1
             choco source add -n=chocolatey -s="https://chocolatey.org/api/v2/" -priority=2
+            $null = New-Item -Path (Join-Path -Path $env:ChocolateyInstall -ChildPath 'license') -ItemType Directory
         SHELL
         chocowin10.vm.provision :shell, :path => "../scripts/InstallStandardApps.ps1", privileged: false
+        chocowin10.vm.provision :shell, :path => "../scripts/InstallBGInfo.ps1", privileged: false
 
         # chocowin10.vm.provision "shell", privileged: false, inline: <<-SHELL
         #     setx.exe trigger 1  # run arbitrary win32 application so LASTEXITCODE is 0
