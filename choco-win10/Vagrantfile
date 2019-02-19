@@ -84,14 +84,8 @@ Vagrant.configure("2") do |config|
         chocowin10.vm.provision :shell, :path => "../scripts/ConfigureAutoLogin.ps1", privileged: false
         chocowin10.vm.provision :shell, :path => "../scripts/PrepareWindows.ps1", privileged: false
         chocowin10.vm.provision :shell, :path => "../scripts/InstallNet4.ps1", privileged: false
-        chocowin10.vm.provision :shell, :path => "../scripts/InstallChocolatey.ps1", privileged: false
+        chocowin10.vm.provision :shell, :path => "../scripts/InstallChocolatey.ps1", args: "-UseLocalSource", privileged: false
         chocowin10.vm.provision :shell, :path => "../scripts/NotifyGuiAppsOfEnvironmentChanges.ps1", privileged: false
-        chocowin10.vm.provision "shell", privileged: false, inline: <<-SHELL
-            choco source remove -n=chocolatey
-            choco source add -n=local -s="\\packages" -priority=1
-            choco source add -n=chocolatey -s="https://chocolatey.org/api/v2/" -priority=2
-            $null = New-Item -Path (Join-Path -Path $env:ChocolateyInstall -ChildPath 'license') -ItemType Directory
-        SHELL
         chocowin10.vm.provision :shell, :path => "../scripts/InstallStandardApps.ps1", privileged: false
         chocowin10.vm.provision :shell, :path => "../scripts/InstallBGInfo.ps1", privileged: false
 
