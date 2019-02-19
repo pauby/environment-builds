@@ -1,7 +1,10 @@
 [CmdletBinding()]
 Param (
     [string[]]
-    $Package
+    $Package,
+
+    [string]
+    $PackageVersion
 )
 
 if ($null -eq (Get-Command -Name 'choco.exe' -ErrorAction SilentlyContinue)) {
@@ -10,6 +13,11 @@ if ($null -eq (Get-Command -Name 'choco.exe' -ErrorAction SilentlyContinue)) {
 else {
     $Package | ForEach-Object {
         Write-Output "Installing Chocolatey package '$_'."
-        choco upgrade $_ -y --no-progress
+        $cmd = "choco upgrade $_ -y --no-progress"
+        if ($PackageVersion) {
+            $cmd += " --version $PackageVersion"
+        }
+
+        Invoke-Expression -Command $cmd
     }
 }
