@@ -30,7 +30,7 @@ Vagrant.configure("2") do |config|
     cfg.vm.synced_folder "../scripts", "/scripts"
 
     cfg.vm.provider :virtualbox do |v, override|
-      override.vm.network :private_network, ip: "10.10.13.14"
+      #override.vm.network :private_network, ip: "10.10.13.14"
       v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.gui = true
       v.customize ["modifyvm", :id, "--vram", 32]
@@ -46,16 +46,11 @@ Vagrant.configure("2") do |config|
     cfg.vm.provision :shell, :path => "../scripts/ConfigureAutoLogin.ps1", privileged: false
     cfg.vm.provision :shell, :path => "../scripts/PrepareWindows.ps1", privileged: false
     cfg.vm.provision :shell, :path => "../scripts/InstallNet4.ps1", privileged: false
-    cfg.vm.provision :shell, :path => "../scripts/InstallChocolatey.ps1", privileged: false
+    cfg.vm.provision :shell, :path => "../scripts/InstallChocolatey.ps1", args: "-UseLocalSource", privileged: false
     cfg.vm.provision :shell, :path => "../scripts/NotifyGuiAppsOfEnvironmentChanges.ps1", privileged: false
-    cfg.vm.provision "shell", privileged: false, inline: <<-SHELL
-        choco source remove -n=chocolatey
-        choco source add -n=local -s="\\packages" -priority=1
-        choco source add -n=chocolatey -s="https://chocolatey.org/api/v2/" -priority=2
-        # create license folder in case we need it
-        $null = New-Item -Path (Join-Path -Path $env:ChocolateyInstall -ChildPath 'license') -ItemType Directory
-    SHELL
     cfg.vm.provision :shell, :path => "../scripts/InstallStandardApps.ps1", privileged: false
     cfg.vm.provision :shell, :path => "../scripts/InstallBGInfo.ps1", privileged: false
+
+    cfg.vm.post_up_message "All done!"
   end
 end
