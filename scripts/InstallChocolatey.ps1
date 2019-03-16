@@ -27,7 +27,7 @@ if ($UseLocalSource.IsPresent) {
     choco source add --name="'local'" --source="'$env:SystemDrive\packages'" --priority="'10'" --bypass-proxy --allow-self-service
 
     # Sources - change priority of community repository
-    Write-Output "Using Chocolatey Community Repository as priority 2 install location."
-    choco source remove --name="'chocolatey'"
-    choco source add --name='chocolatey' --source='https://chocolatey.org/api/v2/' --priority='2' --bypass-proxy
+    #Write-Output "Using Chocolatey Community Repository as priority 20 install location."
+    #choco source remove --name="'chocolatey'"
+    #choco source add --name='chocolatey' --source='https://chocolatey.org/api/v2/' --priority='20' --bypass-proxy
 }
