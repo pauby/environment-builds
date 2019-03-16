@@ -22,9 +22,9 @@ choco config set cacheLocation $env:ALLUSERSPROFILE\choco-cache
 choco config set commandExecutionTimeoutSeconds 14400
 
 if ($UseLocalSource.IsPresent) {
-    Write-Output "Using local \packages folder as priority 1 install location."
+    Write-Output "Using local \packages folder as priority 10 install location."
     # Sources - Add internal repositories
-    choco source add --name="'local'" --source="'$env:SystemDrive\packages'" --priority="'1'" --bypass-proxy --allow-self-service
+    choco source add --name="'local'" --source="'$env:SystemDrive\packages'" --priority="'10'" --bypass-proxy --allow-self-service
 
     # Sources - change priority of community repository
     Write-Output "Using Chocolatey Community Repository as priority 2 install location."
