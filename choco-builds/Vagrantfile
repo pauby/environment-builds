@@ -38,6 +38,9 @@ Vagrant.configure("2") do |config|
   config.vm.provision :shell, :path => "../scripts/InstallStandardApps.ps1", privileged: false
   config.vm.provision :shell, :path => "../scripts/InstallBGInfo.ps1", privileged: false
 
+  # reload machine to have the auto-login and bginfo kick in
+  config.vm.provision :reload
+
   config.vm.post_up_message = "All done!"
 
   config.vm.define "win2016" do |win2016|
