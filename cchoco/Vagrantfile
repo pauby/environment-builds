@@ -74,7 +74,8 @@ Vagrant.configure("2") do |config|
         args: "-RequiredModule @( @{ name='PSDesiredStateConfiguration' }, @{ name='cChoco' } )",
         privileged: false
     cfg.vm.provision "shell", privileged: false, inline: <<-SHELL
-
+      # whichever is the latest version of the local package
+      choco install vscode -y --version 1.32.3
     SHELL
 
     cfg.vm.post_up_message = <<-MESSAGE
