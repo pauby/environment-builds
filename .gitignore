@@ -8,3 +8,4 @@
 # exclude the contents of the auto-install folder but include the readme
 **/auto-install
 !**/auto-install/readme.md
+codealike.*
