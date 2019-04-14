@@ -18,7 +18,7 @@ Vagrant.configure("2") do |config|
     # 2 CPUs
     v.customize ["modifyvm", :id, "--cpus", "2"]
     # Video RAM is 32 MB
-    v.customize ["modifyvm", :id, "--vram", 32]
+    v.customize ["modifyvm", :id, "--vram", 40]
     # For better DNS resolution
     v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
     # No audo
