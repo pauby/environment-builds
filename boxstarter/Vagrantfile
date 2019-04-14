@@ -5,15 +5,15 @@ end
 # http://docs.vagrantup.com/v2/vagrantfile/machine_settings.html
 Vagrant.configure("2") do |config|
 
-  config.vm.define "win10", autostart: "false" do |win10|
-    win10.vm.box = "StefanScherer/windows_10"
+  config.vm.define "win_2016", autostart: "false" do |cfg|
+    cfg.vm.box = "StefanScherer/windows_2016"
 
-    win10.vm.provider :virtualbox do |v, override|
+    cfg.vm.provider :virtualbox do |v, override|
       v.gui = true
       v.memory = 2048
       v.customize ["modifyvm", :id, "--cpus", "1"]
       v.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]
-      v.customize ["modifyvm", :id, "--vram", 32]
+      v.customize ["modifyvm", :id, "--vram", 40]
       v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.customize ["modifyvm", :id, "--audio", "none"]
       v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
@@ -25,7 +25,7 @@ Vagrant.configure("2") do |config|
 
     # https://www.vagrantup.com/docs/hyperv/configuration.html
     # https://technet.microsoft.com/en-us/library/dn798297(v=ws.11).aspx
-    win10.vm.provider :hyperv do |v, override|
+    cfg.vm.provider :hyperv do |v, override|
       # 4GB RAM
       v.memory = 2048
       # 2 CPUs
@@ -44,26 +44,33 @@ Vagrant.configure("2") do |config|
       }
     end
 
-    win10.windows.halt_timeout = 20
-    win10.vm.guest = :windows
-    win10.vm.communicator = "winrm"
+    cfg.windows.halt_timeout = 20
+    cfg.vm.guest = :windows
+    cfg.vm.communicator = "winrm"
 
     # Share `packages` directory as `C:\packages`
-    win10.vm.synced_folder "../packages", "/packages"
-    win10.vm.synced_folder "../scripts", "/scripts"
+    cfg.vm.synced_folder "../packages", "/packages"
+    cfg.vm.synced_folder "../scripts", "/scripts"
 
     # Port forward WinRM / RDP
     # Vagrant 1.9.3 - if you run into Errno::EADDRNOTAVAIL (https://github.com/mitchellh/vagrant/issues/8395),
     #  add host_ip: "127.0.0.1" for it to work
-    win10.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true #, host_ip: "127.0.0.1"
-    win10.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true #, host_ip: "127.0.0.1"
+    cfg.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true #, host_ip: "127.0.0.1"
+    cfg.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true #, host_ip: "127.0.0.1"
     # Port forward SSH (ssh is forwarded by default in most versions of Vagrant,
     # but be sure). This is not necessary if you are not using SSH, but it doesn't
     # hurt anything to have it
-    #win10.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true #, host_ip: "127.0.0.1"
+    #cfg.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true #, host_ip: "127.0.0.1"
 
-    win10.vm.provision :shell, :path => "../scripts/ConfigureAutoLogin.ps1", privileged: false
-    win10.vm.provision :shell, :path => "../scripts/PrepareWindows.ps1", privileged: false
-    win10.vm.provision :shell, :path => "../scripts/ProvisionNetwork.ps1", privileged: false
+    cfg.vm.provision :shell, :path => "../scripts/PrepareWindows.ps1", privileged: false
+
+    cfg.vm.provision "shell", privileged: false, inline: <<-SHELL
+      . { iwr -useb https://boxstarter.org/bootstrapper.ps1 } | iex; get-boxstarter -Force
+    SHELL
+
+    cfg.vm.post_up_message = <<-MESSAGE
+        All done!
+    MESSAGE
+
   end
 end
