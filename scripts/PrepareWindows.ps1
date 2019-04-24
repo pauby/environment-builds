@@ -1,3 +1,9 @@
+[CmdletBinding()]
+Param (
+    [switch]
+    $CleanupWindows10
+)
+
 # Adapted from http://stackoverflow.com/a/29571064/18475
 # Get the OS
 $osData = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $ComputerName
@@ -100,7 +106,7 @@ if ([bool](get-Command -Name 'servermanager.exe' -ErrorAction SilentlyContinue) 
     Get-ScheduledTask -TaskName 'ServerManager' | Disable-ScheduledTask | Out-Null
 }
 
-if ($osData.Name -like "*Windows 10*") {
+if ($CleanUpWindows10.IsPresent -and $osData.Name -like "*Windows 10*") {
     Write-Output "Disabling non-essential Windows services."
     'ajrouter', 'alg', 'appmgmt', 'appxsvc', 'bthavctpsvc', 'bits', 'btagservice', 'bthserv',
         'bluetoothuserservice_*', 'peerdistsvc', 'captureservice_*', 'certpropsvc', 'nfsclnt',
