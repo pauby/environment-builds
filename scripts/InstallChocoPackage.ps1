@@ -12,12 +12,12 @@ if ($null -eq (Get-Command -Name 'choco.exe' -ErrorAction SilentlyContinue)) {
 }
 else {
     $Name | ForEach-Object {
-        Write-Output "Installing Chocolatey package '$_'."
         $cmd = "choco upgrade $_ -y --no-progress"
         if ($Version) {
             $cmd += " --version $Version"
         }
 
+        Write-Output "Installing Chocolatey package '$_' with command '$cmd'."
         Invoke-Expression -Command $cmd
     }
 }
