@@ -51,6 +51,7 @@ Vagrant.configure("2") do |config|
     # Share `packages` directory as `C:\packages`
     cfg.vm.synced_folder "../packages", "/packages"
     cfg.vm.synced_folder "../scripts", "/scripts"
+    cfg.vm.synced_folder "scripts", "/box-scripts"
 
     # Port forward WinRM / RDP
     # Vagrant 1.9.3 - if you run into Errno::EADDRNOTAVAIL (https://github.com/mitchellh/vagrant/issues/8395),
@@ -63,9 +64,11 @@ Vagrant.configure("2") do |config|
     #cfg.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true #, host_ip: "127.0.0.1"
 
     cfg.vm.provision :shell, :path => "../scripts/PrepareWindows.ps1", privileged: false
+    cfg.vm.provision :shell, :path => "../scripts/InstallVMGuestTools.ps1", privileged: false
 
     cfg.vm.provision "shell", privileged: false, inline: <<-SHELL
-      . { iwr -useb https://boxstarter.org/bootstrapper.ps1 } | iex; get-boxstarter -Force
+      # . { iwr -useb https://boxstarter.org/bootstrapper.ps1 } | iex; get-boxstarter -Force
+      Get-Content /box-scripts/boxstarter-bootstrapper.ps1 | iex; get-boxstarter -Force
     SHELL
 
     cfg.vm.post_up_message = <<-MESSAGE
