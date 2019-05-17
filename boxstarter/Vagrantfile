@@ -13,7 +13,7 @@ Vagrant.configure("2") do |config|
       v.memory = 2048
       v.customize ["modifyvm", :id, "--cpus", "1"]
       v.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]
-      v.customize ["modifyvm", :id, "--vram", 70]
+      v.customize ["modifyvm", :id, "--vram", 99]
       v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.customize ["modifyvm", :id, "--audio", "none"]
       v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
@@ -68,7 +68,8 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provision "shell", privileged: false, inline: <<-SHELL
       # . { iwr -useb https://boxstarter.org/bootstrapper.ps1 } | iex; get-boxstarter -Force
-      Get-Content /box-scripts/boxstarter-bootstrapper.ps1 | iex; get-boxstarter -Force
+      . /box-scripts/boxstarter-bootstrapper.ps1 | iex; get-boxstarter -Force
+      choco source add --name="'local'" --source="'$env:SystemDrive\packages'" --priority="'10'" --bypass-proxy --allow-self-service
     SHELL
 
     cfg.vm.post_up_message = <<-MESSAGE

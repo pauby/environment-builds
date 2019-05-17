@@ -8,7 +8,7 @@
       v.memory = 2048
       v.customize ["modifyvm", :id, "--cpus", "1"]
       v.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]
-      v.customize ["modifyvm", :id, "--vram", 70]
+      v.customize ["modifyvm", :id, "--vram", 99]
       v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.customize ["modifyvm", :id, "--audio", "none"]
       v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
