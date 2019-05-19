@@ -21,11 +21,12 @@ Param (
 . .\ConvertTo-ChocoObject.ps1
 
 # get all of the packages from the test repo
-$testPkgs = choco.exe list --source $TestRepo | Select-Object -Skip 1 | Select-Object -SkipLast 1 | ConvertTo-ChocoObject
-$prodPkgs = choco.exe list --source $ProdRepo | Select-Object -Skip 1 | Select-Object -SkipLast 1 | ConvertTo-ChocoObject
+$testPkgs = choco.exe list --source $TestRepo -r | ConvertTo-ChocoObject
+$prodPkgs = choco.exe list --source $ProdRepo -r | ConvertTo-ChocoObject
 $tempPath = Join-Path -Path $env:TEMP -ChildPath ([GUID]::NewGuid()).GUID
 if ($null -eq $testPkgs) {
     Write-Verbose "Test repository appears to be empty. Nothing to push to production."
+    exit 0
 }
 elseif ($null -eq $prodPkgs) {
     $pkgs = $testPkgs
