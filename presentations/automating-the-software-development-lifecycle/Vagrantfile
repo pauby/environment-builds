@@ -54,10 +54,12 @@ Vagrant.configure("2") do |config|
     # This is very distracting during presenting so commenting it out - don't delete so we know why it's not used
     #cfg.vm.provision :shell, :path => "../../shell/InstallBGInfo.ps1", privileged: false
     cfg.vm.provision :shell, :path => "../../shell/InstallChocoPackage.ps1", args: "-Name 'vscode, vscode-powershell, git, chromium, pester, psscriptanalyzer'", privileged: false
+    cfg.vm.provision :shell, :path => "../../shell/InstallChocoPackage.ps1", args: "-Name 'vagrant' -Version '2.1.5'", privileged: false
+    cfg.vm.provision :shell, :path => "../../shell/InstallChocoPackage.ps1", args: "-Name 'virtualbox' -Version '5.2.18'", privileged: false
     cfg.vm.provision :shell, :path => "shell/ProvisionChocolateyServerForJenkins.ps1", privileged: false
     cfg.vm.provision :shell, :path => "../../shell/ProvisionJenkins.ps1", args: "-ConfigurationPath 'c:\\vagrant\\shell\\jenkins-config.zip'", privileged: false
 
-      # reload machine to have the auto-login and bginfo kick in
+    # reload machine to have the auto-login and bginfo kick in
     cfg.vm.provision :reload
 
     cfg.vm.provision "shell", privileged: false, inline: <<-SHELL
