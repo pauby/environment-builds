@@ -33,12 +33,12 @@ Vagrant.configure("2") do |config|
     cfg.vm.provision :shell, :path => "../scripts/InstallNet4.ps1", privileged: false
     cfg.vm.provision :shell, :path => "../scripts/InstallChocolatey.ps1", args: "-UseLocalSource", privileged: false
     cfg.vm.provision :shell, :path => "../scripts/NotifyGuiAppsOfEnvironmentChanges.ps1", privileged: false
+    cfg.vm.provision :shell, :path => "../scripts/InstallVMGuestTools.ps1", privileged: false
     cfg.vm.provision :shell, :path => "../scripts/InstallStandardApps.ps1", privileged: false
     cfg.vm.provision :shell, :path => "../scripts/InstallBGInfo.ps1", privileged: false
-    cfg.vm.provision :shell, :path => "../scripts/InstallChocoPackage.ps1", args:"-Name nexus-oss", privileged: false
-
-    cfg.vm.provision "shell", privileged: false, inline: <<-SHELL
-    SHELL
+    # Artifactory has a depedency on jdk8 but if you let it install the depdendency it fails
+    # best to install this first as it then works.
+    cfg.vm.provision :shell, :path => "../scripts/InstallChocoPackage.ps1", args:"-Name jdk, artifactory", privileged: false
 
     # reload at this stage to allow the autologin to work and bginfo to display
     cfg.vm.provision :reload
