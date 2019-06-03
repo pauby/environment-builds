@@ -20,13 +20,15 @@ if (!(Test-Path -Path env:ChocolateyInstall)) {
 $licenseSourcePath = Join-Path -Path $LicenseRootPath -ChildPath "$LicenseType-chocolatey.license.xml"
 $licenseDestinationPath = Join-Path -Path $env:ChocolateyInstall -ChildPath 'license\chocolatey.license.xml'
 
-if (!(Test-Path $licenseSourcePath)) {
-    Write-Warning "License file '$licenseSourcePath'. Place manually now."
+gci $licenseSourcePath
+
+if (!(Test-Path $licenseSourcePath -ErrorAction SilentlyContinue)) {
+    Write-Warning "License file '$licenseSourcePath' could not be found. Place manually now."
     exit
 }
 
 $path = Split-Path -Path $licenseDestinationPath -Parent
-if (!(Test-Path -Path $path)) {
+if (!(Test-Path -Path $path -ErrorAction SilentlyContinue)) {
     Write-Host 'License folder not found. Creating.'
     $null = New-Item -ItemType Directory -Path $path
 }

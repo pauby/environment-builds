@@ -65,8 +65,11 @@ if ($null -eq (Get-Command -Name 'choco.exe' -ErrorAction SilentlyContinue)) {
     Exit 1
 }
 # Install Chocolatey.Server prereqs
-choco install IIS-WebServer --source windowsfeatures
-choco install IIS-ASPNET45 --source windowsfeatures
+Import-Module -Name ServerManager
+Install-WindowsFeature -Name Web-WebServer -IncludeManagementTools
+Install-WindowsFeature -Name Web-Asp-Net45
+#choco install IIS-WebServer --source windowsfeatures
+#choco install IIS-ASPNET45 --source windowsfeatures
 
 # Install Chocolatey.Server
 choco upgrade chocolatey.server -y
