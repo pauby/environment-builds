@@ -37,7 +37,7 @@ else {
 
 $pkgs | ForEach-Object {
     Write-Verbose "Downloading package '$($_.name)' to '$tempPath'."
-    choco.exe download $_.name --no-progress --output-directory=$tempPath --source=$TestRepo --force
+    choco.exe download $_.name --no-progress --output-directory=$tempPath --source=$TestRepo --force --limitoutput
 
     if ($LASTEXITCODE -eq 0) {
         $pkgPath = (Get-Item -Path (Join-Path -Path $tempPath -ChildPath "$($_.name)*.nupkg")).FullName
@@ -46,12 +46,17 @@ $pkgs | ForEach-Object {
         # INSERT CODE HERE TO TEST YOUR PACKAGE
         # #######################
 
-        $failed = (Invoke-Pester -Script @{ Path = '.\Test-Package.ps1'; Parameters = @{ Package = $_.name; Source = $TestRepo } } -Passthru).FailedCount
+        $pkgPath | ForEach-Object {
+            $failed = (Invoke-Pester -Script @{ Path = '.\Test-Package.ps1'; Parameters = @{ Path = $_.FullName } } -Passthru).FailedCount
+            if ($failed) {
+                break
+            }
+        }
 
         # If package testing is successful ...
         if (-not $failed) {
             Write-Verbose "Pushing downloaded package '$(Split-Path -Path $pkgPath -Leaf)' to production repository '$ProdRepo'."
-            choco.exe push $pkgPath --source=$ProdRepo --api-key=$ProdRepoApiKey --force
+            choco.exe push $pkgPath --source=$ProdRepo --api-key=$ProdRepoApiKey --force --limitoutput
 
             if ($LASTEXITCODE -eq 0) {
                 Write-Verbose "Pushed package successfully."
@@ -70,3 +75,15 @@ $pkgs | ForEach-Object {
         Write-Verbose "Could not download package."
     }
 }
+
+# Jenkins Job Code
+# node {
+#     powershell '''
+#         Set-Location (Join-Path -Path $env:SystemDrive -ChildPath 'scripts')
+#         .\\Update-ProdRepoFromTest.ps1 `
+#             -ProdRepo $env:P_PROD_REPO_URL `
+#             -ProdRepoApiKey $env:P_PROD_REPO_API_KEY `
+#             -TestRepo $env:P_TEST_REPO_URL `
+#             -Verbose
+#     '''
+# }
