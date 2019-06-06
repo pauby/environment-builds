@@ -1,6 +1,6 @@
 <#
 .NOTES
-    Written by Paul Broadwwith (paul@pauby.com) October 2018
+    Written by Paul Broadwith (paul@pauby.com) October 2018
 #>
 function ConvertTo-ChocoObject {
     [CmdletBinding()]
