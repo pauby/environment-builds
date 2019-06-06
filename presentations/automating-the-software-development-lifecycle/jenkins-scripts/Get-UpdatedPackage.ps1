@@ -1,6 +1,6 @@
 <#
 .NOTES
-    Written by Paul Broadwwith (paul@pauby.com) October 2018
+    Written by Paul Broadwith (paul@pauby.com) October 2018
 #>
 
 [CmdletBinding()]
@@ -34,11 +34,13 @@ if ($LASTEXITCODE -eq 2) {
 $localPkgs | ForEach-Object {
     Write-Verbose "Getting remote package information for '$($_.name)'."
     $remotePkg = choco.exe list $_.name --source $RemoteRepo --exact --limitoutput | ConvertTo-ChocoObject
+
     if (-not $null -eq $remotepkg -and ([version]($remotePkg.version) -gt ([version]$_.version))) {
         Write-Verbose "Package '$($_.name)' has a remote version of '$($remotePkg.version)' which is later than the local version '$($_.version)'."
         Write-Verbose "Internalizing package '$($_.name)' with version '$($remotePkg.version)'."
         $tempPath = Join-Path -Path $env:TEMP -ChildPath ([GUID]::NewGuid()).GUID
-        choco.exe download $_.name --no-progress --internalize --force --internalize-all-urls --append-use-original-location --output-directory=$tempPath --source=$RemoteRepo --limitoutput
+        choco.exe download $_.name --no-progress --internalize --force --internalize-all-urls `
+            --append-use-original-location --output-directory=$tempPath --source=$RemoteRepo --limitoutput
 
         if ($LASTEXITCODE -eq 0) {
             Write-Verbose "Pushing package '$($_.name)' to local repository '$LocalRepo'."
@@ -65,14 +67,3 @@ $localPkgs | ForEach-Object {
         }
     }
 }
-
-# Jenkins Job Code
-# node {
-#     powershell.exe '''
-#         Set-Location (Join-Path -Path $env:SystemDrive -ChildPath 'scripts')
-#         .\\Get-UpdatedPackage.ps1 -LocalRepo $env:P_LOCAL_REPO_URL `
-#             -LocalRepoApiKey $env:P_LOCAL_REPO_API_KEY `
-#             -RemoteRepo $env:P_REMOTE_REPO_URL `
-#             -Verbose
-#     '''
-# }
