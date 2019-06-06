@@ -1,13 +1,13 @@
 <#
 .NOTES
-    Written by Paul Broadwwith (paul@pauby.com) October 2018
+    Written by Paul Broadwith (paul@pauby.com) October 2018
 #>
 
 #Requires -Modules Pester
 [CmdletBinding()]
 Param (
     [string[]]
-    $Package,
+    $Name,
 
     [string]
     $Source,
@@ -42,18 +42,33 @@ Describe "Testing Chocolatey Package $(Split-Path -Path $Path -Leaf)" {
         { [xml](Get-Content -Path $nuspecFile) } | Should -Not -Throw
     }
 
-    Context "Testing package $pkg" {
-        it 'should install without error' {
+    Context "Testing package $Name" {
+        $password = ConvertTo-SecureString 'vagrant' -AsPlainText -Force
+        $creds = New-Object System.Management.Automation.PSCredential ("chocotest\vagrant", $password)
+        $session = New-PSSession -ComputerName 'chocotest' -Credential $creds
 
+        it 'should install package without error' {
+            { Invoke-Command -Session $session -ScriptBlock {
+                choco install $Using:Name
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Package install failed"
+                }
+            } } | Should -Not -Throw
             # choco install $pkg -y -s $Source
             # $LASTEXITCODE | Should Be 0
-            $true | Should Be $true
+            # $true | Should Be $true
         }
 
         it 'should uninstall without error' {
             # choco uninstall $pkg -y
             # $LASTEXITCODE | Should Be 0
-            $true | Should Be $true
+            # $true | Should Be $true
+            { Invoke-Command -Session $session -ScriptBlock {
+                choco.exe uninstall $Using:Name
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Package uninstall failed"
+                }
+            } } | Should -Not -Throw
         }
     } #context
 }# describe
