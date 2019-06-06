@@ -33,6 +33,11 @@ if ([bool](Get-Command -Name 'iexplore.exe'  -ErrorAction SilentlyContinue)) {
 Write-Output 'Stopping Windows Update service and setting to Manual startup type.'
 Stop-Service wuauserv -Passthru | Set-Service -StartupType Manual
 
+Write-Output 'Disable Windows Automatic Updates'
+# see https://support.microsoft.com/en-gb/help/328010/how-to-configure-automatic-updates-by-using-group-policy-or-registry-s
+New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Force
+New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'NoAutoUpdate' -Value 1 -Force
+
 # Ensure there is a profile file so we can get tab completion
 $null = New-Item -ItemType Directory $(Split-Path $profile -Parent) -Force
 Set-Content -Path $profile -Encoding UTF8 -Value "" -Force
