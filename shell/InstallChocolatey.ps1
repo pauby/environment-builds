@@ -24,6 +24,7 @@ choco feature enable --name="'logEnvironmentValues'"
 choco config set cacheLocation $env:ALLUSERSPROFILE\choco-cache
 choco config set commandExecutionTimeoutSeconds 14400
 choco feature disable -n=showDownloadProgress
+choco feature disable -n=LogValidationResultsOnWarnings
 
 if ($UseLocalSource.IsPresent) {
     Write-Output "Using local \packages folder as priority 10 install location."
