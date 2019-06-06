@@ -1,6 +1,6 @@
 <#
 .NOTES
-    Written by Paul Broadwwith (paul@pauby.com) October 2018
+    Written by Paul Broadwith (paul@pauby.com) October 2018
 #>
 
 [CmdletBinding()]
@@ -32,7 +32,8 @@ elseif ($null -eq $prodPkgs) {
     $pkgs = $testPkgs
 }
 else {
-    $pkgs = Compare-Object -ReferenceObject $testpkgs -DifferenceObject $prodpkgs -Property name, version | Where-Object SideIndicator -eq '<='
+    $pkgs = Compare-Object -ReferenceObject $testpkgs -DifferenceObject $prodpkgs -Property name, version |
+        Where-Object SideIndicator -eq '<='
 }
 
 $pkgs | ForEach-Object {
@@ -40,17 +41,13 @@ $pkgs | ForEach-Object {
     choco.exe download $_.name --no-progress --output-directory=$tempPath --source=$TestRepo --force --limitoutput
 
     if ($LASTEXITCODE -eq 0) {
-        $pkgPath = (Get-Item -Path (Join-Path -Path $tempPath -ChildPath "$($_.name)*.nupkg")).FullName
-
         # #######################
         # INSERT CODE HERE TO TEST YOUR PACKAGE
         # #######################
-
-        $pkgPath | ForEach-Object {
-            $failed = (Invoke-Pester -Script @{ Path = '.\Test-Package.ps1'; Parameters = @{ Path = $_.FullName } } -Passthru).FailedCount
-            if ($failed) {
-                break
-            }
+        $pkgPath = (Get-Item -Path (Join-Path -Path $tempPath -ChildPath "$($_.name)*.nupkg")).FullName
+        $failed = (Invoke-Pester -Script @{ Path = '.\Test-Package.ps1'; Parameters = @{ Path = $pkgPath; Name = $_.name } } -Passthru).FailedCount
+        if ($failed) {
+            break
         }
 
         # If package testing is successful ...
@@ -75,15 +72,3 @@ $pkgs | ForEach-Object {
         Write-Verbose "Could not download package."
     }
 }
-
-# Jenkins Job Code
-# node {
-#     powershell '''
-#         Set-Location (Join-Path -Path $env:SystemDrive -ChildPath 'scripts')
-#         .\\Update-ProdRepoFromTest.ps1 `
-#             -ProdRepo $env:P_PROD_REPO_URL `
-#             -ProdRepoApiKey $env:P_PROD_REPO_API_KEY `
-#             -TestRepo $env:P_TEST_REPO_URL `
-#             -Verbose
-#     '''
-# }
