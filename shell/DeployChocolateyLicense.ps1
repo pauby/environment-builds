@@ -20,7 +20,7 @@ if (!(Test-Path -Path env:ChocolateyInstall)) {
 $licenseSourcePath = Join-Path -Path $LicenseRootPath -ChildPath "$LicenseType-chocolatey.license.xml"
 $licenseDestinationPath = Join-Path -Path $env:ChocolateyInstall -ChildPath 'license\chocolatey.license.xml'
 
-gci $licenseSourcePath
+Get-ChildItem -Path $licenseSourcePath
 
 if (!(Test-Path $licenseSourcePath -ErrorAction SilentlyContinue)) {
     Write-Warning "License file '$licenseSourcePath' could not be found. Place manually now."
