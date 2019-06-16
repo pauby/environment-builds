@@ -1,7 +1,7 @@
 [CmdletBinding()]
 Param (
     [string]
-    $PackagePath = "packages",
+    $PackagePath = "resources\packages",
     # use this to download and internalize the packages again regardless of whether the version exists or not
     [switch]
     $Force
@@ -24,10 +24,18 @@ if (-not (Test-Path -Path $PackagePath)) {
 
 @(  'chocolateygui', 'dotnet4.5.2', 'chocolatey.server', 'dotnet4.6.1', 'KB2919355', 'KB2919442',
     'baretail', 'dotnetversiondetector', 'notepadplusplus', 'vscode', 'git', 'bginfo',
-    'virtualbox-guest-additions-guest.install' ) | ForEach-Object {
+    'virtualbox-guest-additions-guest.install', 'chromium', 'pester', 'psscriptanalyzer', 
+    'chocolatey.server', 'zoomit' ) | ForEach-Object {
     if ($Force.IsPresent -or (-not (Test-Path -Path (Join-Path -Path $PackagePath -ChildPath "$_.*.nupkg")))) {
         choco download $_ --internalize --internalize-all-urls --append-use-original-location --output-directory=$PackagePath --source="'https://chocolatey.org/api/v2/; https://licensedpackages.chocolatey.org/api/v2/''"
     }
+}
+
+# Download Jenkins
+if ($Force.IsPresent -or (-not (Test-Path -Path (Join-Path -Path $PackagePath -ChildPath "jenkins.nupkg")))) {
+    choco.exe download jenkins --version 2.164.3 --internalize --internalize-all-urls `
+        --append-use-original-location --output-directory=$PackagePath `
+        --source="'https://chocolatey.org/api/v2/; https://licensedpackages.chocolatey.org/api/v2/''"
 }
 
 # Download .NET 4 Installer
