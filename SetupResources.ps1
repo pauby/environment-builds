@@ -2,12 +2,17 @@
 Param (
     [string]
     $PackagePath = "packages",
-    # use this to download and internlaize the packages again regardless of whether the version exists or not
+    # use this to download and internalize the packages again regardless of whether the version exists or not
     [switch]
     $Force
 )
 
+Write-Warning 'NOTE: This script requires you to have Chocolatey For Business to internalize packages.'
 
+$PackagePath = Resolve-Path -Path $PackagePath
+if (-not (Test-Path -Path $PackagePath)) {
+    Write-Error "The packages path '$PackagePath' must exist."
+}
 
 # Licensed Feed
 # Chocolatey FOSS and Commercial
@@ -18,7 +23,8 @@ Param (
 }
 
 @(  'chocolateygui', 'dotnet4.5.2', 'chocolatey.server', 'dotnet4.6.1', 'KB2919355', 'KB2919442',
-    'baretail', 'dotnetversiondetector', 'notepadplusplus', 'vscode', 'git', 'launchy', 'bginfo' ) | ForEach-Object {
+    'baretail', 'dotnetversiondetector', 'notepadplusplus', 'vscode', 'git', 'bginfo',
+    'virtualbox-guest-additions-guest.install' ) | ForEach-Object {
     if ($Force.IsPresent -or (-not (Test-Path -Path (Join-Path -Path $PackagePath -ChildPath "$_.*.nupkg")))) {
         choco download $_ --internalize --internalize-all-urls --append-use-original-location --output-directory=$PackagePath --source="'https://chocolatey.org/api/v2/; https://licensedpackages.chocolatey.org/api/v2/''"
     }
