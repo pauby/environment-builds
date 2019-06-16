@@ -8,13 +8,10 @@ Vagrant.configure("2") do |config|
     # Variables
     #
     folder_syncs = [
-      { local: '../../resources/packages',               remote: '/packages' },
-      { local: '../../resources/licenses',               remote: '/licenses' },
-#      { local: '../../resources',                        remote: '/resources' },
-#      { local: 'jenkins-scripts',                        remote: '/scripts' },
-      { local: '../../shell',                            remote: '/shell' },
-      { local: '~/git/pauby/mine/presentations',         remote: '/presentations' },
-      { local: '~/git/pauby/mine/private-presentations', remote: '/private-presentations' }
+      { local: '../../resources/packages',  remote: '/packages' },
+      { local: '../../resources/licenses',  remote: '/licenses' },
+      { local: 'presentations',             remote: '/presentations' },
+      { local: '../../shell',               remote: '/shell' }
     ]
 
     #
