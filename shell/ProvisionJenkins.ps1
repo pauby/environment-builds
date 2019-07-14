@@ -67,6 +67,8 @@ else {
     $pw = Get-Content "c:\program files (x86)\jenkins\secrets\initialAdminPassword"
     Set-Location "c:\program files (x86)\jenkins\jre\bin"
 
+    # Wait another 10 seconds as sometimes we install plugins and the first 1 or 2 don't work
+    Start-Sleep -Seconds 10
     Write-Host "Installing Jenkins plugins."
     "build-token-root", "build-timeout", "workflow-aggregator", "pipeline-stage-view", "powershell" | ForEach-Object {
         # Just wait an extra 5 seconds to be sure
