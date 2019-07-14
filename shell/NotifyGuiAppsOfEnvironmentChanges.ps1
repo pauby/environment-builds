@@ -14,10 +14,10 @@ $WM_SETTINGCHANGE = 0x1a;
 $result = [uintptr]::zero
 
 # notify all windows of environment block change
-[win32.nativemethods]::SendMessageTimeout($HWND_BROADCAST, $WM_SETTINGCHANGE, [uintptr]::Zero, "Environment", 2, 5000, [ref]$result);
+[win32.nativemethods]::SendMessageTimeout($HWND_BROADCAST, $WM_SETTINGCHANGE, [uintptr]::Zero, "Environment", 2, 5000, [ref]$result) | Out-Null
 
 # Attempting to make the script recapture environment changes
-setx.exe trigger 1
+setx.exe trigger 1 | Out-Null
 
 #Write-Output "For good measure, we are going to take out explorer"
 #tskill.exe explorer /a /v
