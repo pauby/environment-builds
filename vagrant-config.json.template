@@ -1,7 +1,13 @@
 // You can add comments here
 {
     "version": "1.0",
+    // if you have multiple machines then you can use this to specify common options.
     "common": {
+        // note that the CPU and RAM you specify here will override what you have for your machine
+        "cpu": "1",
+        "ram: "4096",
+
+        // the common forwarded ports will be created first and then whatever you specify for the machine
         "forwarded_ports": [
             {
                 "name": "ssh",
@@ -10,24 +16,30 @@
                 "host_ip": "127.0.0.1"
             }
         ],
+
+        // the common provision scripts will be created first and then whatever you specify for the machine
         "provision_scripts": [
             {
                 "name": "Prepare Windows",
                 "path": "../shell/PrepareWindows.ps1",
+                // Set this to true if you want vagrant reload to be run after this script
+                // set to false or remove if you don't.
                 "reboot": false
             },
             {
                 "name": "Install VM Guest Tools",
                 "path": "../shell/InstallVMGuestTools.ps1",
-                "reboot": false
             },
             {
                 "name": "Install Chocolatey",
                 "path": "../shell/InstallChocolatey.ps1",
                 "args": "-UseLocalSource",
-                "reboot": false
             }
         ],
+
+        // the common folders will be created first and then whatever you specify for the machine
+        // note that the `vagrant` folder (using `.`) and the `shell` folder (using `../shell`)
+        // are created automatically and don't have to specified
         "folders": [
             {
                 "host_path": "../resources/packages",
@@ -35,18 +47,34 @@
             }
         ]
     },
+
     "machine": [
         {
             "name": "boxstarter",
+            // remove this or set it to true if you want the box to automatically run at a `vagrant up`
             "autostart": "false",
             "box":  "ferventcoder/win2012r2-x64-nocm",
             "guest_os": "windows",
-            //"guest_up_message": "All done!",
+            // message displayed at the end when the box is up
+            "guest_up_message": "All done!",
 
-            "vcpu": "1",
+            "cpu": "1",
             "ram": "2048",
+
             "ip_address": "10.10.10.100",
-            "hyperv_defaultswitch": "Default Switch",
+
+            "provider": {
+                "hyperv": {
+                    // you can specify a different box for this provider
+                    "box": "joebloggs/hyperv-image",
+                    // the name of your Hyper-V default switch to connect the machine to
+                    "default_switch": "Default Switch"
+                },
+                "virtualbox": {
+                    // you can specify a different box for this provider
+                    "box": "joebloggs/hyperv-image"
+                }
+            },
 
             "forwarded_ports": [
                  {
