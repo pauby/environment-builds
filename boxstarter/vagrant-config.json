@@ -1,0 +1,93 @@
+{
+    "version": "1.0",
+    "common": {
+        "cpu": "1",
+        "ram": "2048",
+
+        "provision_scripts": [
+            {
+                "name": "Prepare Windows",
+                "path": "../shell/PrepareWindows.ps1",
+                "reboot": false
+            },
+            {
+                "name": "Install VM Guest Tools",
+                "path": "../shell/InstallVMGuestTools.ps1",
+                "reboot": false
+            },
+            {
+                "name": "Install Chocolatey",
+                "path": "../shell/InstallChocolatey.ps1",
+                "args": "-UseLocalSource",
+                "reboot": false
+            },
+            {
+                "name": "Install Standard Apps",
+                "path": "../shell/InstallChocoPackage.ps1",
+                "args": "-Name '7zip.install, notepadplusplus.install, baretail' -UseLocalSource",
+                "reboot": false
+            },
+            {
+                "name": "Install Boxstarter",
+                "path": "box-scripts/Install-Boxstarter.ps1",
+                "reboot": true
+            }
+        ],
+        "folders": [
+            {
+                "host_path": "../resources/packages",
+                "guest_path": "/packages"
+            },
+            {
+                "host_path": "box-scripts",
+                "guest_path": "/box-scripts"
+            }
+        ]
+    },
+    "machine": [
+        {
+            "name": "boxstarter-2008r2",
+            "autostart": "false",
+            "box": "jborean93/WindowsServer2008R2",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
+        },
+        {
+            "name": "boxstarter-2012r2",
+            "autostart": "false",
+            "box":  "ferventcoder/win2012r2-x64-nocm",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
+        },
+        {
+            "name": "boxstarter-2016",
+            "autostart": "false",
+            "box": "StefanScherer/windows_2016",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
+        },
+        {
+            "name": "boxstarter-2019",
+            "autostart": "false",
+            "box": "StefanScherer/windows_2019",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
+        }
+    ]
+}
