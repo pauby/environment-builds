@@ -27,9 +27,9 @@ choco feature disable -n=showDownloadProgress
 choco feature disable -n=LogValidationResultsOnWarnings
 
 if ($UseLocalSource.IsPresent) {
-    Write-Output "Using local \packages folder as priority 10 install location."
+    Write-Host "Using local '$($env:SystemDrive)\packages' folder as priority 1 install location."
     # Sources - Add internal repositories
-    choco source add --name="'local'" --source="'$env:SystemDrive\packages'" --priority="'1'" --bypass-proxy --allow-self-service
+    choco source add --name="'local'" --source="'$($env:SystemDrive)\packages'" --priority="'1'" --bypass-proxy --allow-self-service
 
     # Sources - change priority of community repository
     #Write-Output "Using Chocolatey Community Repository as priority 20 install location."
