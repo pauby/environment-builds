@@ -1,0 +1,86 @@
+// You can add comments here
+{
+    "version": "1.0",
+    "common": {
+        "forwarded_ports": [
+            {
+                "name": "ssh",
+                "guest_port": "22",
+                "host_port": "2222",
+                "host_ip": "127.0.0.1"
+            }
+        ],
+        "provision_scripts": [
+            {
+                "name": "Prepare Windows",
+                "path": "../shell/PrepareWindows.ps1",
+                "reboot": false
+            },
+            {
+                "name": "Install VM Guest Tools",
+                "path": "../shell/InstallVMGuestTools.ps1",
+                "reboot": false
+            },
+            {
+                "name": "Install Chocolatey",
+                "path": "../shell/InstallChocolatey.ps1",
+                "args": "-UseLocalSource",
+                "reboot": false
+            }
+        ],
+        "folders": [
+            {
+                "host_path": "../resources/packages",
+                "guest_path": "/packages"
+            }
+        ]
+    },
+    "machine": [
+        {
+            "name": "boxstarter",
+            "autostart": "false",
+            "box":  "ferventcoder/win2012r2-x64-nocm",
+            "guest_os": "windows",
+            //"guest_up_message": "All done!",
+
+            "vcpu": "1",
+            "ram": "2048",
+            "ip_address": "10.10.10.100",
+            "hyperv_defaultswitch": "Default Switch",
+
+            "forwarded_ports": [
+                 {
+                     "name": "ssh",
+                     "guest_port": "22",
+                     "host_port": "2222",
+                     "host_ip": "127.0.0.1"
+                 }
+            ],
+
+            "provider": {
+                "hyperv": {
+                    "box": "pauby/win2012r2-x64",
+                    "default_switch": "Default Switch"
+                },
+                "virtualbox": {
+                    "box": "abc/win2012r2-x64"
+                }
+            },
+
+            "provision_scripts": [
+                {
+                    "name": "Install Boxstarter",
+                    "path": "box-scripts/Install-Boxstarter.ps1",
+                    "reboot": true
+                }
+            ],
+
+            "folders": [
+                {
+                    "host_path":  "box-scripts",
+                    "guest_path": "/box-scripts"
+                }
+            ]
+        }
+    ]
+}
