@@ -35,14 +35,14 @@ Stop-Service wuauserv -Passthru | Set-Service -StartupType Manual
 
 Write-Output 'Disable Windows Automatic Updates'
 # see https://support.microsoft.com/en-gb/help/328010/how-to-configure-automatic-updates-by-using-group-policy-or-registry-s
-New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Force
-New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'NoAutoUpdate' -Value 1 -Force
+New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Force | Out-Null
+New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'NoAutoUpdate' -Value 1 -Force | Out-Null
 
 # Ensure there is a profile file so we can get tab completion
-$null = New-Item -ItemType Directory $(Split-Path $profile -Parent) -Force
+New-Item -ItemType Directory $(Split-Path $profile -Parent) -Force | Out-Null
 Set-Content -Path $profile -Encoding UTF8 -Value "" -Force
 
-$null = winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="2048"}'
+winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="2048"}' | Out-Null
 
 # Server Core does not have Explorer.exe
 if ([bool](Get-Command -Name 'explorer.exe'  -ErrorAction SilentlyContinue)) {
