@@ -11,3 +11,4 @@
 codealike.*
 **/resources
 *-secret*
+Vagrantfile
