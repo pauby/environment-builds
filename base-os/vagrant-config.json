@@ -1,0 +1,93 @@
+{
+    "version": "1.0",
+    "common": {
+        "cpu": "1",
+        "ram": "2048",
+        "provision_scripts": [
+            {
+                "name": "Prepare Windows",
+                "path": "../shell/PrepareWindows.ps1",
+                "reboot": false
+            },
+            {
+                "name": "Install VM Guest Tools",
+                "path": "../shell/InstallVMGuestTools.ps1",
+                "reboot": true
+            }
+        ],
+        "folders": [
+            {
+                "host_path": "../resources/packages",
+                "guest_path": "/packages"
+            }
+        ]
+    },
+    "machine": [
+        {
+            "name": "baseos-2008r2",
+            "autostart": "false",
+            "box": "jborean93/WindowsServer2008R2",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
+        },
+        {
+            "name": "baseos-2012r2",
+            "autostart": "false",
+            "box": "ferventcoder/win2012r2-x64-nocm",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
+        },
+        {
+            "name": "baseos-2016",
+            "autostart": "false",
+            "box": "StefanScherer/windows_2016",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
+        },
+        {
+            "name": "baseos-2016core",
+            "autostart": "false",
+            "box": "jacqinthebox/windowsserver2016core",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
+        },
+        {
+            "name": "baseos-2019",
+            "autostart": "false",
+            "box": "StefanScherer/windows_2019",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
+        },
+        {
+            "name": "baseos-10",
+            "autostart": "false",
+            "box": "StefanScherer/windows_10",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
+        }
+    ]
+}
