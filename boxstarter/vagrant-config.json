@@ -88,6 +88,17 @@
                     "default_switch": "Default Switch"
                 }
             }
+        },
+        {
+            "name": "boxstarter-10",
+            "autostart": "false",
+            "box": "StefanScherer/windows_10",
+            "guest_os": "windows",
+            "provider": {
+                "hyperv": {
+                    "default_switch": "Default Switch"
+                }
+            }
         }
     ]
 }
