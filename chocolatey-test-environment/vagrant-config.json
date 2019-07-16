@@ -55,6 +55,7 @@
         {
             "name": "chocotest-win10",
             "box": "StefanScherer/windows_10",
+            "autostart": "false",
             "guest_os": "windows",
 
             "provider": {
