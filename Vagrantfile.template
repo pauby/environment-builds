@@ -1,4 +1,5 @@
-﻿Vagrant.require_version ">= 2.1.0"    # the before / after triggers need this version
+﻿# NOTE THIS IS A VERY MUCH WIP FROM A NON-RUBY DEV!
+#Vagrant.require_version ">= 2.1.0"    # the before / after triggers need this version
 
 # read the config file
 vagrant_config = JSON.parse(File.read(File.join(File.dirname(__FILE__), 'vagrant-config.json')))
@@ -10,14 +11,19 @@ Vagrant.configure("2") do |config|
   # go through each server in the config file
   vagrant_config["machine"].each do |vm|
 
-    if vm["autostart"] != nil and vm["autostart"] == true
-      vm_autostart = "true"
+    # by default all machines will autostart
+    if vm["autostart"] == nil or vm["autostart"] == true
+      vm_autostart = true
     else
-      vm_autostart = "false"
+      vm_autostart = false
     end
+
     config.vm.define vm["name"], autostart: vm_autostart do |cfg|
 
       cfg.vm.box = vm["box"]
+      if vm["box_version"] != nil
+        cfg.vm.box_version = vm["box_version"]
+      end
       cfg.vm.hostname = vm["name"]
 
       cfg.windows.graceful_halt_timeout = 120
@@ -148,8 +154,14 @@ Vagrant.configure("2") do |config|
         # do we have a virtualbox provider box name
         # the if for each section has to be done this way rather that one big vm["provider"]["hyperv"]["avc"]
         # if any part is missing it errors
-        if vm["provider"] != nil and vm["provider"]["virtualbox"] != nil and vm["provider"]["virtualbox"]["box"] != nil
-          override.vm.box = vm["provider"]["virtualbox"]["box"]
+        if vm["provider"] != nil and vm["provider"]["virtualbox"] != nil
+          if vm["provider"]["virtualbox"]["box"] != nil
+            override.vm.box = vm["provider"]["virtualbox"]["box"]
+          end
+
+          if vm["provider"]["virtualbox"]["box_version"]
+            override.vm.box_version = vm["provider"]["hyperv"]["box_version"]
+          end
         end
 
         v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
@@ -171,7 +183,11 @@ Vagrant.configure("2") do |config|
         # if any part is missing it errors
         if vm["provider"] and vm["provider"]["hyperv"] != nil
           if vm["provider"]["hyperv"]["box"] != nil
-            override.vm.box = "pauby/win2012r2-x64" #vm["provider"]["hyperv"]["box"]
+            override.vm.box = vm["provider"]["hyperv"]["box"]
+          end
+
+          if vm["provider"]["hyperv"]["box_version"]
+            override.vm.box_version = vm["provider"]["hyperv"]["box_version"]
           end
 
           if vm["provider"]["hyperv"]["default_switch"] != nil
@@ -208,7 +224,7 @@ Vagrant.configure("2") do |config|
           override.vm.synced_folder ".", "/vagrant", smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
           override.vm.synced_folder "../shell", "/shell", smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
 
-          override.vm.provision "Stop SMB Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
+          override.vm.provision "Stop Hyper-V SMB Synced Folders Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
         end # if
       end #hyperv provider
 
