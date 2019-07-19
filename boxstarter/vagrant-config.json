@@ -4,101 +4,129 @@
         "cpu": "1",
         "ram": "2048",
 
+        "provider": {
+            "hyperv": {
+                "default_switch": "Default Switch"
+            }
+        },
+
         "provision_scripts": [
             {
-                "name": "Prepare Windows",
-                "path": "../shell/PrepareWindows.ps1",
-                "reboot": false
-            },
-            {
-                "name": "Install VM Guest Tools",
-                "path": "../shell/InstallVMGuestTools.ps1",
-                "reboot": false
-            },
-            {
-                "name": "Install Chocolatey",
-                "path": "../shell/InstallChocolatey.ps1",
-                "args": "-UseLocalSource",
-                "reboot": false
-            },
-            {
-                "name": "Install Standard Apps",
-                "path": "../shell/InstallChocoPackage.ps1",
-                "args": "-Name '7zip.install, notepadplusplus.install, baretail' -UseLocalSource",
-                "reboot": false
-            },
-            {
-                "name": "Install Boxstarter",
-                "path": "box-scripts/Install-Boxstarter.ps1",
-                "reboot": true
+                "name": "Provision Box",
+                "path": "box-scripts/ProvisionBox.ps1"
             }
+            // {
+            //     "name": "Prepare Windows",
+            //     "path": "../shell/PrepareWindows.ps1",
+            //     "reboot": false
+            // },
+            // {
+            //     "name": "Install VM Guest Tools",
+            //     "path": "../shell/InstallVMGuestTools.ps1",
+            //     "reboot": false
+            // },
+            // {
+            //     "name": "Install Chocolatey",
+            //     "path": "../shell/InstallChocolatey.ps1",
+            //     "args": "-UseLocalSource",
+            //     "reboot": false
+            // },
+            // {
+            //     "name": "Install Standard Apps",
+            //     "path": "../shell/InstallChocoPackage.ps1",
+            //     "args": "-Name '7zip.install, notepadplusplus.install, baretail' -UseLocalSource",
+            //     "reboot": false
+            // },
+            // {
+            //     "name": "Install Boxstarter",
+            //     "path": "box-scripts/Install-Boxstarter.ps1",
+            //     "reboot": true
+            // }
         ],
         "folders": [
             {
                 "host_path": "../resources/packages",
                 "guest_path": "/packages"
-            },
-            {
-                "host_path": "box-scripts",
-                "guest_path": "/box-scripts"
             }
         ]
     },
     "machine": [
         {
-            "name": "boxstarter-2008r2",
+            "name": "bs-2008r2",
             "autostart": "false",
             "box": "jborean93/WindowsServer2008R2",
-            "guest_os": "windows",
-            "provider": {
-                "hyperv": {
-                    "default_switch": "Default Switch"
-                }
-            }
+            "guest_os": "windows"
+            // "provider": {
+            //     "hyperv": {
+            //         "default_switch": "Default Switch"
+            //     }
+            // }
         },
         {
-            "name": "boxstarter-2012r2",
+            "name": "bs-2012r2",
             "autostart": "false",
-            "box":  "ferventcoder/win2012r2-x64-nocm",
-            "guest_os": "windows",
-            "provider": {
-                "hyperv": {
-                    "default_switch": "Default Switch"
-                }
-            }
+            "box":  "pauby/win2012r2-x64",
+            "guest_os": "windows"
+            // "provider": {
+            //     "hyperv": {
+            //         "default_switch": "Default Switch"
+            //     }
+            // }
         },
         {
-            "name": "boxstarter-2016",
+            "name": "bs-2016",
             "autostart": "false",
             "box": "StefanScherer/windows_2016",
-            "guest_os": "windows",
-            "provider": {
-                "hyperv": {
-                    "default_switch": "Default Switch"
-                }
-            }
+            "guest_os": "windows"
+            // "provider": {
+            //     "hyperv": {
+            //         "default_switch": "Default Switch"
+            //     }
+            // }
         },
         {
-            "name": "boxstarter-2019",
+            "name": "bs-2019",
             "autostart": "false",
             "box": "StefanScherer/windows_2019",
-            "guest_os": "windows",
-            "provider": {
-                "hyperv": {
-                    "default_switch": "Default Switch"
-                }
-            }
+            "guest_os": "windows"
+            // "provider": {
+            //     "hyperv": {
+            //         "default_switch": "Default Switch"
+            //     }
+            // }
         },
         {
-            "name": "boxstarter-10",
+            "name": "bs-10-1709",
             "autostart": "false",
             "box": "StefanScherer/windows_10",
-            "guest_os": "windows",
-            "provider": {
-                "hyperv": {
-                    "default_switch": "Default Switch"
-                }
-            }
+            "box_version": "2017.12.14",
+            "guest_os": "windows"
+        },
+        {
+            "name": "bs-10-1803",
+            "autostart": "false",
+            "box": "StefanScherer/windows_10",
+            "box_version": "2018.04.30",
+            "guest_os": "windows"
+        },
+        {
+            "name": "bs-10-1809",
+            "autostart": "false",
+            "box": "StefanScherer/windows_10",
+            "box_version": "2018.10.03",
+            "guest_os": "windows"
+            // "provider": {
+            //     "hyperv": {
+            //         "default_switch": "Default Switch"
+            //     }
+            // }
+        },
+        {
+            "name": "bs-10-1903",
+            "autostart": "false",
+            "box": "StefanScherer/windows_10",
+            "box_version": "2019.07.11",
+            "guest_os": "windows"
         }
     ]
 }
