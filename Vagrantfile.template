@@ -181,7 +181,7 @@ Vagrant.configure("2") do |config|
       config.vm.provider :hyperv do |v, override|
         # the if for each section has to be done this way rather that one big vm["provider"]["hyperv"]["avc"]
         # if any part is missing it errors
-        if vm["provider"] and vm["provider"]["hyperv"] != nil
+        if vm["provider"] != nil and vm["provider"]["hyperv"] != nil
           if vm["provider"]["hyperv"]["box"] != nil
             override.vm.box = vm["provider"]["hyperv"]["box"]
           end
@@ -189,15 +189,13 @@ Vagrant.configure("2") do |config|
           if vm["provider"]["hyperv"]["box_version"]
             override.vm.box_version = vm["provider"]["hyperv"]["box_version"]
           end
+        end
 
-          # check the default_switch for the machine first of all as it will
-          if vm["provider"]["hyperv"]["default_switch"] != nil
-            override.vm.network "public_network", bridge: vm["provider"]["hyperv"]["default_switch"]
-          elsif vagrant_config["common"] != nil and vagrant_config["common"]["provider"] != nil and
-            vagrant_config["common"]["provider"]["hyperv"] != nil and
-            vagrant_config["common"]["provider"]["hyperv"]["default_switch"] != nil
-            override.vm.network "public_network", bridge: vm["common"]["provider"]["hyperv"]["default_switch"]
-          end
+        # check the default_switch for the machine first of all as it will
+        if vm["provider"] != nil and vm["provider"]["hyperv"] != nil and vm["provider"]["hyperv"]["default_switch"] != nil
+          override.vm.network "public_network", bridge: vm["provider"]["hyperv"]["default_switch"]
+        elsif vagrant_config["common"] != nil and vagrant_config["common"]["provider"] != nil and vagrant_config["common"]["provider"]["hyperv"] != nil and vagrant_config["common"]["provider"]["hyperv"]["default_switch"] != nil
+          override.vm.network "public_network", bridge: vagrant_config["common"]["provider"]["hyperv"]["default_switch"]
         end
 
         v.enable_virtualization_extensions = true
