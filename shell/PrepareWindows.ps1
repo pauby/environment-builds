@@ -6,7 +6,7 @@ Param (
 
 # Adapted from http://stackoverflow.com/a/29571064/18475
 # Get the OS
-$osData = Get-CimInstance -ClassName Win32_OperatingSystem -ComputerName $ComputerName
+$osData = Get-CimInstance -ClassName Win32_OperatingSystem
 
 # check if we have Internet Explorer installed
 if ([bool](Get-Command -Name 'iexplore.exe'  -ErrorAction SilentlyContinue)) {
@@ -112,30 +112,38 @@ if ([bool](get-Command -Name 'servermanager.exe' -ErrorAction SilentlyContinue) 
 }
 
 if ($CleanUpWindows10.IsPresent -and $osData.Name -like "*Windows 10*") {
-    Write-Output "Disabling non-essential Windows services."
-    'ajrouter', 'alg', 'appmgmt', 'appxsvc', 'bthavctpsvc', 'bits', 'btagservice', 'bthserv',
-        'bluetoothuserservice_*', 'peerdistsvc', 'captureservice_*', 'certpropsvc', 'nfsclnt',
-        'diagtrack', 'IpxlatCfgSvc', 'iphlpsvc', 'SharedAccess', 'irmon', 'vmicvss', 'vmictimesync',
-        'vmicrdv', 'vmicvmsession', 'vmicheartbeat', 'vmicshutdown', 'vmicguestinterface', 'vmickvpexchange',
-        'HvHost', 'lfsvc', 'MapsBroker', 'dmwappushsvc', 'PhoneSvc', 'SEMgrSvc', 'WpcMonSvc', 'CscService',
-        'NcdAutoSetup', 'Netlogon', 'NaturalAuthentication', 'SmsRouter', 'MSiSCSI', 'AppVClient', 'SNMPTRAP',
-        'SCPolicySvc', 'ScDeviceEnum', 'SCardSvr', 'SensorService', 'SensrSvc', 'SensorDataService', 'RetailDemo',
-        'icssvc', 'WMPNetworkSvc', 'wisvc', 'wcncsvc', 'FrameServer', 'WFDSConSvc', 'WebClient', 'TabletInputService',
-        'XboxNetApiSvc', 'XblGameSave', 'XblAuthManager', 'xbgm', 'WwanSvc' | ForEach-Object {
-        Stop-Service -Name $_ -PassThru -ErrorAction SilentlyContinue | Set-Service -StartupType Disabled -ErrorAction SilentlyContinue
-    }
+    # https://github.com/Sycnex/Windows10Debloater
 
-    Write-Output "Stopping OneDrive."
-    Get-Process -Name OneDrive* | Stop-Process -ErrorAction SilentlyContinue 
+    $debloatPath = Join-Path -Path $env:TEMP -ChildPath 'Windows10SysPrepDebloater.ps1'
+    # grab the script from GitHub but if it doesn't work dont fail the vagrant up
+    Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/Sycnex/Windows10Debloater/master/Windows10SysPrepDebloater.ps1' -OutFile $debloatPath -ErrorAction SilentlyContinue
+    # The script generates a lot of output!
+    & $debloatPath -Debloat | Out-Null
 
-    if (Get-Command -Command 'Get-AppxPackage') {
-        '*3dbuilder*', '*alarms*', '*appconnector*', '*appinstaller*', '*communicationsapps*', '*calculator*', '*camera*',
-            '*feedback*', '*officehub*', '*getstarted*', '*skypeapp*', '*zunemusic*', '*zune*', '*maps*', '*messaging*',
-            '*solitaire*', '*wallet*', '*connectivitystore*', '*bingfinance*', '*bing*', '*zunevideo*', '*bingnews*', 
-            '*onenote*', '*oneconnect*', '*mspaint*', '*people*', '*commsphone*', '*windowsphone*', '*phone*', '*photos*',
-            '*bingsports*', '*sticky*', '*sway*', '*3d*', '*soundrecorder*', '*bingweather*', '*holographic*',
-            '*windowsstore*', '*xbox*' | ForEach-Object {
-            Get-AppxPackage -Name $_ -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -Package $_ -ErrorAction SilentlyContinue
-        }
-    }
+    # Write-Output "Disabling non-essential Windows services."
+    # 'ajrouter', 'alg', 'appmgmt', 'appxsvc', 'bthavctpsvc', 'bits', 'btagservice', 'bthserv',
+    #     'bluetoothuserservice_*', 'peerdistsvc', 'captureservice_*', 'certpropsvc', 'nfsclnt',
+    #     'diagtrack', 'IpxlatCfgSvc', 'iphlpsvc', 'SharedAccess', 'irmon', 'vmicvss', 'vmictimesync',
+    #     'vmicrdv', 'vmicvmsession', 'vmicheartbeat', 'vmicshutdown', 'vmicguestinterface', 'vmickvpexchange',
+    #     'HvHost', 'lfsvc', 'MapsBroker', 'dmwappushsvc', 'PhoneSvc', 'SEMgrSvc', 'WpcMonSvc', 'CscService',
+    #     'NcdAutoSetup', 'Netlogon', 'NaturalAuthentication', 'SmsRouter', 'MSiSCSI', 'AppVClient', 'SNMPTRAP',
+    #     'SCPolicySvc', 'ScDeviceEnum', 'SCardSvr', 'SensorService', 'SensrSvc', 'SensorDataService', 'RetailDemo',
+    #     'icssvc', 'WMPNetworkSvc', 'wisvc', 'wcncsvc', 'FrameServer', 'WFDSConSvc', 'WebClient', 'TabletInputService',
+    #     'XboxNetApiSvc', 'XblGameSave', 'XblAuthManager', 'xbgm', 'WwanSvc' | ForEach-Object {
+    #     Stop-Service -Name $_ -PassThru -ErrorAction SilentlyContinue | Set-Service -StartupType Disabled -ErrorAction SilentlyContinue
+    # }
+
+    # Write-Output "Stopping OneDrive."
+    # Get-Process -Name OneDrive* | Stop-Process -ErrorAction SilentlyContinue 
+
+    # if (Get-Command -Command 'Get-AppxPackage') {
+    #     '*3dbuilder*', '*alarms*', '*appconnector*', '*appinstaller*', '*communicationsapps*', '*calculator*', '*camera*',
+    #         '*feedback*', '*officehub*', '*getstarted*', '*skypeapp*', '*zunemusic*', '*zune*', '*maps*', '*messaging*',
+    #         '*solitaire*', '*wallet*', '*connectivitystore*', '*bingfinance*', '*bing*', '*zunevideo*', '*bingnews*', 
+    #         '*onenote*', '*oneconnect*', '*mspaint*', '*people*', '*commsphone*', '*windowsphone*', '*phone*', '*photos*',
+    #         '*bingsports*', '*sticky*', '*sway*', '*3d*', '*soundrecorder*', '*bingweather*', '*holographic*',
+    #         '*windowsstore*', '*xbox*' | ForEach-Object {
+    #         Get-AppxPackage -Name $_ -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -Package $_ -ErrorAction SilentlyContinue
+    #     }
+    # }
 }
