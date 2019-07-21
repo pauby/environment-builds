@@ -13,7 +13,8 @@
         "provision_scripts": [
             {
                 "name": "Provision Box",
-                "path": "box-scripts/ProvisionBox.ps1"
+                "path": "box-scripts/ProvisionBox.ps1",
+                "reboot": true
             }
         ],
         "folders": [
