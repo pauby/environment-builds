@@ -19,9 +19,21 @@ if ((Get-Command -Name 'syspin.exe' -ErrorAction SilentlyContinue) -ne $true) {
 }
 
 if ($Taskbar.IsPresent) {
-    syspin $Path 5386
+    $taskbarPinLink = Join-Path -Path ([Environment]::GetFolderPath('CommonStartup')) -ChildPath 'PinPowerShellToTaskbar.lnk'
+
+    $WshShell = New-Object -comObject WScript.Shell
+    $Shortcut = $WshShell.CreateShortcut($taskbarPinLink)
+    $Shortcut.TargetPath = "syspin.exe"
+    $Shortcut.Arguments = "$Path 5386"
+    $Shortcut.Save()
 }
 
 if ($StartMenu.IsPresent) {
-    syspin $Path 51201
+    $startmenuPinLink = Join-Path -Path ([Environment]::GetFolderPath('CommonStartup')) -ChildPath 'PinPowerShellToStartMenu.lnk'
+
+    $WshShell = New-Object -comObject WScript.Shell
+    $Shortcut = $WshShell.CreateShortcut($startmenuPinLink)
+    $Shortcut.TargetPath = "syspin.exe"
+    $Shortcut.Arguments = "$Path 51201"
+    $Shortcut.Save()
 }
