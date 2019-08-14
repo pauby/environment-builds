@@ -1,0 +1,79 @@
+// You can add comments here
+{
+    "version": "1.0",
+    // if you have multiple machines then you can use this to specify common options.
+    "common": {
+        "cpu": "1",
+        "ram": "2048",
+
+        "provision_scripts": [
+            {
+                "name": "Configure Autologin",
+                "path": "../shell/ConfigureAutoLogin.ps1"
+            },
+            {
+                "name": "Prepare Windows",
+                "path": "../shell/PrepareWindows.ps1"
+            },
+            {
+                "name": "Set Region",
+                "path": "../shell/SetRegion.ps1",
+                "args": "-Region 'UK'"
+            },
+            {
+                "name": "Install Chocolatey",
+                "path": "../shell/InstallChocolatey.ps1",
+                "args": "-UseLocalSource"
+            },
+            {
+                "name": "Notify System of Environment Changes",
+                "path": "../shell/NotifyGuiAppsOfEnvironmentChanges.ps1"
+            },
+            {
+                "name": "Install VM Guest Tools",
+                "path": "../shell/InstallVMGuestTools.ps1"
+            },
+            {
+                "name": "Install Required Chocolatey Packages",
+                "path": "../shell/InstallChocoPackage.ps1",
+                "args": "-UseLocalSource -Name 'vscode, vscode-powershell, git, vivaldi, notepadplusplus, nuget.commandline, syspin'"
+            }
+        ],
+
+        "folders": [
+            {
+                "host_path": "../resources/packages",
+                "guest_path": "/packages"
+            },
+            {
+                "host_path": "auto-install",
+                "guest_path": "/auto-install"
+            },
+            {
+                "host_path": "../resources/licenses",
+                "guest_path": "/licenses"
+            }
+        ]
+    },
+
+    "machine": [
+        {
+            "name": "choco-win2016",
+            "autostart": "false",
+            "box":  "StefanScherer/windows_2016",
+            "guest_os": "windows"
+        },
+        {
+            "name": "choco-win10",
+            "autostart": "false",
+            "box": "StefanScherer/windows_10",
+            "guest_os": "windows"
+        },
+        {
+            "name": "choco-win2012r2",
+            "autostart": "false",
+            "box": "devopsguys/Windows2012R2Eval",
+            "guest_os": "windows"
+        }
+    ]
+}
