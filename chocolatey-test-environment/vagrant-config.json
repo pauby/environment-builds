@@ -44,25 +44,13 @@
         {
             "name": "chocotest",
             "box":  "ferventcoder/win2012r2-x64-nocm",
-            "guest_os": "windows",
-
-            "provider": {
-                "hyperv": {
-                    "default_switch": "Default Switch"
-                }
-            }
+            "guest_os": "windows"
         },
         {
             "name": "chocotest-win10",
             "box": "StefanScherer/windows_10",
             "autostart": "false",
             "guest_os": "windows",
-
-            "provider": {
-                "hyperv": {
-                    "default_switch": "Default Switch"
-                }
-            },
             "provision_scripts": [
                 {
                     "name": "Pin Windows PowerShell",
