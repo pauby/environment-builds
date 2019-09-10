@@ -34,11 +34,29 @@ Vagrant.configure("2") do |config|
       cfg.winrm.username = "vagrant"
       cfg.winrm.password = "vagrant"
       cfg.vm.guest = vm["guest_os"]
-      cfg.vm.communicator = "winrm"
 
       cfg.windows.set_work_network = true
       if vm["ip_address"] != nil
         cfg.vm.network :private_network, ip: vm["ip_address"]
+      end
+
+      # set the communicator for the virtual machine
+      if vm["guest_os"] == "linux"
+        # for linux we ignore what the communicator is set to as it can only be ssh
+        cfg.vm.communicator = "ssh"
+      else
+        if vm["communicator"] != nil
+          cfg.vm.communicator = vm["communicator"]
+        elsif vagrant_config["common"] != nil and vagrant_config["common"]["communicator"] != nil
+          cfg.vm.communicator = vagrant_config["common"]["communicator"]
+        else
+          cfg.vm.communicator = "winrm"   # this is the default
+        end
+
+        # if we are running ssh on Windows disable key insertion
+        if cfg.vm.communicator == "ssh"
+          cfg.ssh.insert_key = false
+        end
       end
 
       if vm["guest_os"] == "windows"
@@ -63,23 +81,24 @@ Vagrant.configure("2") do |config|
       # box ports
       if vm["forwarded_ports"] != nil
         vm["forwarded_ports"].each do |port|
-          cfg.vm.network :forwarded_port, guest: fport["guest_port"], host: port["host_port"], id: port["name"], auto_correct: true, host_ip: port["host_ip"]
+          cfg.vm.network :forwarded_port, guest: port["guest_port"], host: port["host_port"], id: port["name"], auto_correct: true, host_ip: port["host_ip"]
         end
       end
 
       # check if we have any synced folders otherwise add default ones
       # common folders?
-      if vagrant_config["common"] != nil and vagrant_config["common"]["folders"] != nil
-        vagrant_config["common"]["folders"].each do |folder|
-          cfg.vm.synced_folder folder["host_path"], folder["guest_path"]
+      if (vagrant_config["common"] != nil and vagrant_config["common"]["disable_folders"] != true) or vm["disable_folders"] != true
+        if vagrant_config["common"] != nil and vagrant_config["common"]["folders"] != nil
+          vagrant_config["common"]["folders"].each do |folder|
+            cfg.vm.synced_folder folder["host_path"], folder["guest_path"]
+          end
         end
-      end
 
-      # box folders?
-      if vm["folders"] != nil
-        vm["folders"].each do |folder|
-          #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
-          cfg.vm.synced_folder folder["host_path"], folder["guest_path"]
+        if vm["folders"] != nil
+          vm["folders"].each do |folder|
+            #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
+            cfg.vm.synced_folder folder["host_path"], folder["guest_path"]
+          end
         end
       end
 
@@ -133,7 +152,7 @@ Vagrant.configure("2") do |config|
       end # if
 
       if vm["guest_up_message"] != nil
-        cfg.vm.post_up_message = "Jenkins Username is admin. All done!"
+        cfg.vm.post_up_message = vm["guest_up_message"]
       end
 
       # Providers
@@ -219,18 +238,28 @@ Vagrant.configure("2") do |config|
         # if we have created environment variables for username and password
         # then override the folders being synced to use them
         if ENV['VAGRANT_HYPERV_SMB_USERNAME'] != nil and ENV['VAGRANT_HYPERV_SMB_PASSWORD'] != nil
-          if vm["folders"] != nil
-            vm["folders"].each do |folder|
-              #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
-              override.vm.synced_folder folder["host_path"], folder["guest_path"], smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
-            end # each
+          if (vagrant_config["common"] != nil and vagrant_config["common"]["disable_folders"] != true) or vm["disable_folders"] != true
+            if vagrant_config["common"] != nil and vagrant_config["common"]["folders"] != nil
+              vagrant_config["common"]["folders"].each do |folder|
+                override.vm.synced_folder folder["host_path"], folder["guest_path"], smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+              end
+            end
+
+            if vm["folders"] != nil
+              vm["folders"].each do |folder|
+                #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
+                override.vm.synced_folder folder["host_path"], folder["guest_path"], smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+              end # each
+            end
           end #if
 
-          # always sync these folders
-          override.vm.synced_folder ".", "/vagrant", smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
-          override.vm.synced_folder "../shell", "/shell", smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+          # always sync these folders unless folders are disabled
+          if (vagrant_config["common"] != nil and vagrant_config["common"]["disable_folders"] != true) or vm["disable_folders"] != true
+            override.vm.synced_folder ".", "/vagrant", smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+            override.vm.synced_folder "../shell", "/shell", smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
 
-          override.vm.provision "Stop Hyper-V SMB Synced Folders Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
+            override.vm.provision "Stop Hyper-V SMB Synced Folders Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
+          end
         end # if
       end #hyperv provider
 
