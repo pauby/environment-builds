@@ -6,6 +6,9 @@
         // note that the CPU and RAM you specify here will override what you have for your machine
         "cpu": "1",
         "ram: "4096",
+        // only for use with guest_os == windows
+        // this can be winrm or ssh
+        "communicator": "ssh",
 
         // the common forwarded ports will be created first and then whatever you specify for the machine
         "forwarded_ports": [
@@ -60,6 +63,9 @@
 
             "cpu": "1",
             "ram": "2048",
+            // only for use with guest_os == windows
+            // this can be winrm or ssh
+            "communicator": "winrm",
 
             "ip_address": "10.10.10.100",
 
