@@ -1,0 +1,59 @@
+{
+    "version": "1.0",
+    "machine": [
+        {
+            "name": "puppet-01",
+            "cpu": "1",
+            "ram": "4096",
+            "box": "StefanScherer/windows_2016",
+            "guest_os": "windows",
+            "provision_scripts": [
+                {
+                    "name": "Configure Autologin",
+                    "path": "../shell/ConfigureAutoLogin.ps1"
+                },
+                {
+                    "name": "Prepare Windows",
+                    "path": "../shell/PrepareWindows.ps1"
+                },
+                {
+                    "name": "Set Region",
+                    "path": "../shell/SetRegion.ps1",
+                    "args": "-Region 'UK'"
+                },
+                {
+                    "name": "Install Chocolatey",
+                    "path": "../shell/InstallChocolatey.ps1",
+                    "args": "-UseLocalSource"
+                },
+                {
+                    "name": "Notify System of Environment Changes",
+                    "path": "../shell/NotifyGuiAppsOfEnvironmentChanges.ps1"
+                },
+                {
+                    "name": "Install VM Guest Tools",
+                    "path": "../shell/InstallVMGuestTools.ps1"
+                },
+                {
+                    "name": "Install Required Chocolatey Packages",
+                    "path": "../shell/InstallChocoPackage.ps1",
+                    "args": "-UseLocalSource -Name 'vscode, vscode-powershell, git, notepadplusplus, syspin, powershell-core, puppet-agent'"
+                },
+                {
+                    "name": "Final Box Provisioning",
+                    "path": "shell/Provision-Box.ps1"
+                }
+            ],
+            "folders": [
+                {
+                    "host_path": "../resources/packages",
+                    "guest_path": "/packages"
+                },
+                {
+                    "host_path": "~/git",
+                    "guest_path": "/git"
+                }
+            ]
+        }
+    ]
+}
