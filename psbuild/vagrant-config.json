@@ -4,7 +4,7 @@
 
     "machine": [
         {
-            "name": "coding",
+            "name": "psbuild",
             "box":  "stefanscherer/windows_2016",
             "guest_os": "windows",
             "cpu": "2",
