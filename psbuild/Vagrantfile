@@ -1,62 +1,162 @@
-unless Vagrant.has_plugin?("vagrant-reload")
-  raise 'vagrant-reload is not installed!'
-end
+vagrantConfig = {
+  "vcpu": "2",
+  "ram": "4096",
+
+  "hyperv_defaultswitch": "Default Switch",
+
+  "folders": [
+      { local: '../resources',  remote: '/resources' },
+      { local: '~/git',                  remote: '/git' }#,
+      # everything after here is not needed unless debugging
+      # the puppet stuff is mapped anway with the module_path and manifests_path Puppet configuration settings
+#      { local: '.',                      remote: '/vagrant' },
+#      { local: '../shared',               remote: '/shared' },
+#      { local: 'puppet/manifests',         remote: '/puppet/manifests' },
+#      { local: '../resources/puppet/modules',      remote: '/puppet/modules' }
+    ]
+}
 
 Vagrant.configure("2") do |config|
 
-  config.vm.define "win2016" do |config|
-    config.vm.box = "StefanScherer/windows_2016"
+  config.vagrant.plugins = 'vagrant-reload'
 
-    config.windows.halt_timeout = 60
+  config.vm.define "psbuild" do |cfg|
+
+    #
+    # Configuration
+    #
+    cfg.vm.box = "StefanScherer/windows_2016"
+    cfg.vm.hostname = "psbuild"
+    cfg.vm.graceful_halt_timeout = 120
+
     # https://github.com/hashicorp/vagrant/issues/6430
-    config.winrm.retry_limit = 30
-    config.winrm.retry_delay = 10
+    cfg.winrm.retry_delay = 10
+    cfg.winrm.username = "vagrant"
+    cfg.winrm.password = "vagrant"
 
-    config.winrm.username = "vagrant"
-    config.winrm.password = "vagrant"
-    config.vm.guest = :windows
-    config.vm.communicator = "winrm"
+    cfg.vm.guest = :windows
+    cfg.vm.communicator = "winrm"
 
-    config.vm.hostname = "win2016"
-    config.windows.set_work_network = true
+    cfg.windows.set_work_network = true
+    #cfg.vm.network :private_network, ip: "192.168.100.10"
 
-    config.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true, host_ip: "127.0.0.1"
-    config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
-    config.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
+    cfg.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true, host_ip: "127.0.0.1"
+    cfg.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
+    cfg.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
 
-    config.vm.synced_folder "~/git", "/git"
-    config.vm.synced_folder "../packages", "/packages"
-    config.vm.synced_folder "../licenses", "/licenses"
-    config.vm.synced_folder "../scripts", "/scripts"
+    folder_syncs = vagrantConfig[:folders]
+    folder_syncs.each do |folder|
+      #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
+      cfg.vm.synced_folder folder[:local], folder[:remote]
+    end
 
-    config.vm.provider :virtualbox do |v, override|
-      override.vm.network :private_network, ip: "10.10.13.14"
+    cfg.vm.provision "Copying files to guest ...", type: "file", source: "../shared/assets", destination: "c:/assets"
+
+    cfg.vm.provision "Preparing virtual machine ...", type: "shell", run: "once", privileged: true, inline: <<-SHELL
+      winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="2048"}'
+    SHELL
+
+    # install the puppet agent - version doesn't matter at the moment as we will upgrade it with Chocolatey
+    cfg.vm.provision "Installing Puppet Agent ...", type: "shell", run: "once", privileged: true, inline: <<-SHELL
+      Copy-Item -Path c:\\resources\\installers\\puppet-agent-6.14.0-x64.msi -Destination $HOME\\Documents
+      Start-Process -FilePath $HOME\\Documents\\puppet-agent-6.14.0-x64.msi \`
+        -ArgumentList "/qn", "/norestart", "/l*v pp.log" -Wait
+    SHELL
+
+    $msg = <<-MSG
+    To apply configuration inside the VM run:
+
+    > cd \tmp\vagrant-puppet
+    > puppet apply .\manifests-846018e2aa141a5eb79a64b4015fc5f3\provision.pp --modulepath="modules-8570b817e924e54eca808f31c371c372\;modules-c99887649eb14a4949f689f5cee91063\"`
+
+    (NOTE: The paths will be different).
+
+    To install a module from the Puppet Forge (forge.puppet.com) to the resources folder:
+
+    > puppet module install puppetlabs-dsc --modulepath ~\\Sync\\choco-resources\\puppet\\modules\
+    MSG
+    cfg.vm.post_up_message = $msg
+
+    cfg.vm.provision :puppet do |puppet|
+      # puppet.facter = {
+      #   "hostuser" => ENV['USERNAME']
+      #}
+
+      puppet.manifests_path = "puppet/manifests"
+      puppet.module_path = [ "../shared/puppet/modules", "../resources/puppet/modules" ]
+      puppet.manifest_file = "provision.pp"
+      puppet.options = "--verbose" #--debug"
+
+      puppet.facter = {
+        "domain" => "local",
+        "kernel" => "windows",
+        "operatingsystem" => "windows",
+        "osfamily" => "windows",
+      }
+    end
+
+    # cfg.vm.provision :shell, :path => "../shared/shell/ConfigureAutoLogin.ps1", privileged: true
+    # cfg.vm.provision :shell, :path => "../shared/shell/PrepareWindows.ps1", privileged: true
+    # cfg.vm.provision :shell, :path => "../shared/shell/SetRegion.ps1", args: "-Region 'UK'", privileged: true
+    # cfg.vm.provision :shell, :path => "../shared/shell/InstallChocolatey.ps1", args: "-UseLocalSource", run: "once", privileged: true
+    # cfg.vm.provision :shell, :path => "../shared/shell/NotifyGuiAppsOfEnvironmentChanges.ps1", run: "once", privileged: true
+    # cfg.vm.provision :shell, :path => "../shared/shell/InstallVMGuestTools.ps1", run: "once", privileged: true
+    # # This is very distracting during presenting so commenting it out - don't delete so we know why it's not used
+    # cfg.vm.provision :shell, :path => "../shared/shell/InstallBGInfo.ps1", privileged: true
+    # cfg.vm.provision :shell, :path => "../shared/shell/InstallChocoPackage.ps1", args: "-UseLocalSource -Name 'vscode, vscode-powershell, git, vivaldi, notepadplusplus, nuget.commandline, syspin'", run: "once", privileged: true
+    # cfg.vm.provision :shell, :path => "shell/PreparePowerShellBuildEnvironment.ps1", privileged: true
+
+    # cfg.vm.provision "Pin applications to the taskbar", type: "shell", run: "once", privileged: true, inline: <<-SHELL
+    #   syspin "$env:SystemRoot\\system32\\WindowsPowerShell\\v1.0\\powershell.exe" 5386
+    #   syspin "$env:ProgramFiles\\Microsoft VS Code\\code.exe" 5386
+    # SHELL
+
+    # reload machine to have the auto-login and bginfo kick in
+    #cfg.vm.provision :reload
+
+    #
+    # Providers
+    #
+    cfg.vm.provider :virtualbox do |v, override|
       v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.gui = true
-      v.customize ["modifyvm", :id, "--vram", 99]
-      v.customize ["modifyvm", :id, "--memory", "1024"]
+      v.customize ["modifyvm", :id, "--cpus", vagrantConfig[:vcpu]]
+      # turn on nested virtualization
+      v.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+      v.customize ["modifyvm", :id, "--vram", "150"]
+      v.customize ["modifyvm", :id, "--memory", vagrantConfig[:ram]]
       v.customize ["modifyvm", :id, "--audio", "none"]
       v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
       v.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
       v.customize ["modifyvm", :id, "--usb", "off"]
-      # linked clones for speed and size
-      v.linked_clone = true if Vagrant::VERSION >= '1.8.0'
+      v.linked_clone = true
     end
 
-  config.vm.provision :shell, :path => "../scripts/ConfigureAutoLogin.ps1", privileged: false
-  config.vm.provision :shell, :path => "../scripts/PrepareWindows.ps1", privileged: false
-  config.vm.provision :shell, :path => "../scripts/InstallNet4.ps1", privileged: false
-  config.vm.provision :shell, :path => "../scripts/InstallChocolatey.ps1", args: "-UseLocalSource", privileged: false
-  config.vm.provision :shell, :path => "../scripts/InstallChocoPackage.ps1", args: "-Name vscode, git", privileged: false
-  config.vm.provision :shell, :path => "../scripts/PreparePowerShellBuildEnvironment.ps1", privileged: false
-  config.vm.provision :shell, :path => "../scripts/NotifyGuiAppsOfEnvironmentChanges.ps1", privileged: false
-  config.vm.provision :shell, :path => "../scripts/InstallStandardApps.ps1", privileged: false
-  config.vm.provision :shell, :path => "../scripts/InstallBGInfo.ps1", privileged: false
+    config.vm.provider :hyperv do |v, override|
+      override.vm.network "public_network", bridge: vagrantConfig[:hyperv_defaultswitch]
+      v.enable_virtualization_extensions = true
+      v.maxmemory = vagrantConfig[:ram]
+      v.cpus = vagrantConfig[:vcpu]
+      v.ip_address_timeout = 130
+      v.linked_clone = true
+      v.vm_integration_services = {
+        guest_service_interface: true,
+        heartbeat: true,
+        key_value_pair_exchange: true,
+        shutdown: true,
+        time_synchronization: true,
+        vss: true
+      }
 
-  # reload machine to have the auto-login and bginfo kick in
-  config.vm.provision :reload
+      if ENV['VAGRANT_HYPERV_SMB_USERNAME'] != nil and ENV['VAGRANT_HYPERV_SMB_PASSWORD'] != nil
+        folder_syncs = vagrantConfig[:folders]
+        folder_syncs.each do |folder|
+          #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
+          override.vm.synced_folder folder[:local], folder[:remote], smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD'], type: "smb"
+        end
+      end
 
-  config.vm.post_up_message = "All done!"
-
+      override.vm.provision "Stop SMB Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
+    end
   end
 end
