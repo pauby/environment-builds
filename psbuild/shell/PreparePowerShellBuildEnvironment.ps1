@@ -1,5 +1,8 @@
 #Requires -RunAsAdministrator
 
+# set tls 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
+
 # dependencies
 if ((-not (Get-Command -Name 'Get-PackageProvider' -ErrorAction SilentlyContinue)) -or
     ($null -eq (Get-PackageProvider | Where Name -eq 'nuget'))) {
