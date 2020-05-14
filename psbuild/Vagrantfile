@@ -63,18 +63,20 @@ Vagrant.configure("2") do |config|
         -ArgumentList "/qn", "/norestart", "/l*v pp.log" -Wait
     SHELL
 
-    $msg = <<-MSG
-    To apply configuration inside the VM run:
+    $msg = <<MSG
+To apply configuration inside the VM run:
 
-    > cd \tmp\vagrant-puppet
-    > puppet apply .\manifests-846018e2aa141a5eb79a64b4015fc5f3\provision.pp --modulepath="modules-8570b817e924e54eca808f31c371c372\;modules-c99887649eb14a4949f689f5cee91063\"`
+$ cd \tmp\vagrant-puppet
+$ puppet apply .\manifests-846018e2aa141a5eb79a64b4015fc5f3\provision.pp --modulepath="modules-8570b817e924e54eca808f31c371c372\;modules-c99887649eb14a4949f689f5cee91063\"`
 
-    (NOTE: The paths will be different).
+(NOTE: The paths will be different).
 
-    To install a module from the Puppet Forge (forge.puppet.com) to the resources folder:
+To install a module from the Puppet Forge (forge.puppet.com) to the resources folder:
 
-    > puppet module install puppetlabs-dsc --modulepath ~\\Sync\\choco-resources\\puppet\\modules\
-    MSG
+$ puppet module install puppetlabs-dsc --modulepath ~\\Sync\\choco-resources\\puppet\\modules\
+
+MSG
+    
     cfg.vm.post_up_message = $msg
 
     cfg.vm.provision :puppet do |puppet|
