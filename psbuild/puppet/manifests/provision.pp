@@ -10,6 +10,12 @@ case $operatingsystem {
   }
 }
 
+# disable the Chocolatey source
+chocolateysource { 'chocolatey':
+  ensure => disabled,
+}
+
+
 $packages_install = [ "git", "iridium-browser", "firefox", "notepadplusplus", "nuget.commandline", "syspin" ]
 package { $packages_install:
   ensure => installed,
