@@ -107,49 +107,140 @@ Vagrant.configure("2") do |config|
 #      cfg.vm.synced_folder "../shell", "/shell"
 
       # do we have any common provisioning scripts?
-      if vagrant_config["common"] != nil and vagrant_config["common"]["provision_scripts"] != nil
-        vagrant_config["common"]["provision_scripts"].each do |common_script|
+#      if vagrant_config["common"] != nil and vagrant_config["common"]["provision_scripts"] != nil
+#        vagrant_config["common"]["provision_scripts"].each do |common_script|
 
-          common_name = common_script["path"]
-          if common_script["name"] != nil
-            common_name = common_script["name"]
-          end
+#          common_name = common_script["path"]
+#          if common_script["name"] != nil
+#            common_name = common_script["name"]
+#          end
 
-          common_args = ""
-          if common_script["args"] != nil
-            common_args = common_script["args"]
-          end
+#          common_args = ""
+#          if common_script["args"] != nil
+#            common_args = common_script["args"]
+#          end
 
-          cfg.vm.provision common_name, type: "shell", path: common_script["path"], args: common_args, privileged: true
+#          cfg.vm.provision common_name, type: "shell", path: common_script["path"], args: common_args, privileged: true
 
-          if common_script["reboot"] == true
-            cfg.vm.provision :reload
+#          if common_script["reboot"] == true
+#            cfg.vm.provision :reload
+#          end # if
+#        end #do
+#      end # if
+
+      # do we have any common provisioning?
+      if vagrant_config["common"] != nil and vagrant_config["common"]["provisioning"] != nil
+        provisioning = vagrant_config["common"]["provisioning"]
+      end
+
+      # do we have any box specific provisioning?
+      if vm["provisioning"] != nil
+        provisioning.unshift(*vm["provisioning"])
+      end
+
+      if provisioning != nil
+        provisioning.each do |provision_config|
+
+          if provision_config["type"] == "shell"
+
+            provision_name = provision_config["path"]
+            if provision_config["name"] != nil
+              provision_name = provision_config["name"]
+            end
+
+            provision_args = ""
+            if provision_config["args"] != nil
+              provision_args = provision_config["args"]
+            end
+
+            cfg.vm.provision provision_name, type: "shell", path: provision_config["path"], args: provision_args, privileged: true
+
+            if provision_config["reboot"] == true
+              cfg.vm.provision :reload
+            end # if
+          elsif provision_config["type"] == "puppet"
+
+            if vm["guest_os"] == "windows"
+              # set WinRm shell memory and install puppet agent - version doesn't matter at the moment as we will upgrade it with Chocolatey
+              cfg.vm.provision "Installing Puppet Agent ...", type: "shell", run: "once", privileged: true, inline: <<-SHELL
+                winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="2048"}'
+                if (-not (Get-Command -Name 'puppet.exe' -ErrorAction SilentlyContinue)) {
+                  Copy-Item -Path c:\\resources\\installers\\puppet-agent-6.14.0-x64.msi -Destination $HOME\\Documents
+                  Start-Process -FilePath $HOME\\Documents\\puppet-agent-6.14.0-x64.msi \`
+                    -ArgumentList "/qn", "/norestart", "/l*v pp.log" -Wait
+                }
+              SHELL
+            end
+
+            cfg.vm.provision :puppet do |puppet|
+              # puppet.facter = {
+              #   "hostuser" => ENV['USERNAME']
+              #}
+
+              puppet.manifests_path = "puppet/manifests"
+              if provision_config["manifests_path"] != nil
+                puppet.manifests_path = provision_config["manifests_path"]
+              end
+
+              puppet.module_path = [ "../shared/puppet/modules", "../resources/puppet/modules" ]
+              if provision_config["module_path"] != nil
+                puppet.module_path = provision_config["module_path"]
+              end
+
+              puppet.manifest_file = "provision.pp"
+              if provision_config["manifest_file"] != nil
+                puppet.manifest_file = provision_config["manifest_file"]
+              end
+
+              #puppet.options = "--verbose" #--debug"
+              if provision_config["options"] != nil
+                puppet.options = provision_config["options"]
+              end
+
+              if provision_config["facter"] != nil
+                puppet.facter = provision_config["facter"]
+              end
+
+    #          puppet.facter = {
+    #            "domain" => "local",
+    #            "kernel" => "windows",
+    #            "operatingsystem" => "windows",
+    #            "osfamily" => "windows",
+    #          }
+            end #cfg puppet
+          elsif provision_config["type"] == "file"
+
+            provision_name = provision_config["source"] + " to " + provision_config["destination"]
+            if provision_config["name"] != nil
+              provision_name = provision_config["name"]
+            end
+
+            cfg.vm.provision provision_name, type: "file", source: provision_config["source"], destination: provision_config["destination"]
           end # if
         end #do
       end # if
-
 
       # do we have any box provisioning scripts?
-      if vm["provision_scripts"] != nil
-        vm["provision_scripts"].each do |script|
+#      if vm["provision_scripts"] != nil
+#        vm["provision_scripts"].each do |script|
 
-          name = script["path"]
-          if script["name"] != nil
-            name = script["name"]
-          end
+#          name = script["path"]
+#          if script["name"] != nil
+#            name = script["name"]
+#          end
 
-          args = ""
-          if script["args"] != nil
-            args = script["args"]
-          end
+#          args = ""
+#          if script["args"] != nil
+#            args = script["args"]
+#          end
 
-          cfg.vm.provision name, type: "shell", path: script["path"], args: args, privileged: true
+#          cfg.vm.provision name, type: "shell", path: script["path"], args: args, privileged: true
 
-          if script["reboot"] == true
-            cfg.vm.provision :reload
-          end # if
-        end #do
-      end # if
+#          if script["reboot"] == true
+#            cfg.vm.provision :reload
+#          end # if
+#        end #do
+#      end # if
 
       if vm["guest_up_message"] != nil
         cfg.vm.post_up_message = vm["guest_up_message"]
