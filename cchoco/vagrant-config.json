@@ -4,54 +4,40 @@
         "cpu": "1",
         "ram": "4096",
 
-        "provision_scripts": [
+        "provisioning": [
             {
-                "name": "Prepare Windows",
-                "path": "../shell/PrepareWindows.ps1"
-            },
-            {
-                "name": "Configure Auto Login",
-                "path": "../shell/ConfigureAutoLogin.ps1"
-            },
-            {
-                "name": "Install Chocolatey",
-                "path": "../shell/InstallChocolatey.ps1",
-                "args": "-UseLocalSource"
-            },
-            {
-                "name": "VM Provisioning",
-                "path": "../shell/NotifyGuiAppsOfEnvironmentChanges.ps1"
-            },
-            {
-                "name": "Install VM Guest Tools",
-                "path": "../shell/InstallVMGuestTools.ps1"
-            },
-            {
-                "name": "Install Standard Apps",
-                "path": "../shell/InstallStandardApps.ps1"
-            },
-            {
-                "name": "Install PowerShell Modules",
-                "path": "../shell/InstallPowerShellModule.ps1",
-                "args": "-Module @( @{ name='PSDesiredStateConfiguration' }, @{ name='cChoco' } )"
+                "type": "puppet"
             }
         ],
         "folders": [
             {
-                "host_path": "../resources/packages",
-                "guest_path": "/packages"
+                "host_path": "../resources",
+                "guest_path": "/resources"
             },
             {
-                "host_path": "../resources/licenses",
-                "guest_path": "/licenses"
+                "host_path": "~/git",
+                "guest_path": "/git"
             }
         ]
     },
 
     "machine": [
         {
-            "name": "cchoco",
+            "name": "cchoco-2016",
             "box": "StefanScherer/windows_2016",
+            "autostart": false,
+            "guest_os": "windows"
+        },
+        {
+            "name": "cchoco-10",
+            "box": "StefanScherer/windows_10",
+            "autostart": false,
+            "guest_os": "windows"
+        },
+        {
+            "name": "cchoco-2019",
+            "box": "StefanScherer/windows_2019",
+            "autostart": false,
             "guest_os": "windows"
         }
     ]
