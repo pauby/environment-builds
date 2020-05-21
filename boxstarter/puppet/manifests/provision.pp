@@ -10,12 +10,6 @@ include chocolatey_local_install
 
 include chocolatey_configure
 
-case $operatingsystem {
-  'windows': {
-    Package { provider => chocolatey, }
-  }
-}
-
 # disable the Chocolatey source
 chocolateysource { 'chocolatey':
   ensure => disabled,
@@ -25,9 +19,8 @@ include vm_guest_tools
 
 include setup_bginfo
 
-$packages_install = [ "git", "iridium-browser", "firefox", "notepadplusplus", "nuget.commandline", "syspin" ]
+$packages_install = [ "notepadplusplus", "7zip", "boxstarter" ]
 package { $packages_install:
-  ensure => installed,
+  ensure   => installed,
+  provider => "chocolatey",
 }
-
-# dont install any PowerShell modules here as it's importabt they are installed from the moduel build
