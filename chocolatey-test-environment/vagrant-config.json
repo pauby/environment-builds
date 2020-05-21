@@ -7,20 +7,20 @@
         "provision_scripts": [
             {
                 "name": "Prepare Windows",
-                "path": "../shell/PrepareWindows.ps1"
+                "path": "../shared/shell/PrepareWindows.ps1"
             },
             {
                 "name": "Configure Auto Login",
-                "path": "../shell/ConfigureAutoLogin.ps1"
+                "path": "../shared/shell/ConfigureAutoLogin.ps1"
             },
             {
                 "name": "Install Chocolatey",
-                "path": "../shell/InstallChocolatey.ps1",
+                "path": "../shared/shell/InstallChocolatey.ps1",
                 "args": "-UseLocalSource"
             },
             {
                 "name": "Install VM Guest Tools",
-                "path": "../shell/InstallVMGuestTools.ps1"
+                "path": "../shared/shell/InstallVMGuestTools.ps1"
             },
             {
                 "name": "Final Provisioning",
@@ -28,10 +28,18 @@
                 "reboot": true
             }
         ],
+
+        "provisioning": [
+            {
+                // dont need anything else here as the default are enough
+                "type": "puppet"
+            }
+        ],
+
         "folders": [
             {
-                "host_path": "../resources/packages",
-                "guest_path": "/packages"
+                "host_path": "../resources",
+                "guest_path": "/resources"
             },
             {
                 "host_path": "auto-install",
@@ -45,19 +53,19 @@
             "name": "chocotest",
             "box":  "ferventcoder/win2012r2-x64-nocm",
             "guest_os": "windows"
-        },
-        {
-            "name": "chocotest-win10",
-            "box": "StefanScherer/windows_10",
-            "autostart": "false",
-            "guest_os": "windows",
-            "provision_scripts": [
-                {
-                    "name": "Pin Windows PowerShell",
-                    "path": "../shell/PinTo.ps1",
-                    "args": "-Path 'C:\\windows\\system32\\WindowsPowerShell\\v1.0\\powershell.exe' -Taskbar -StartMenu"
-                }
-            ]
-        }
+        }//,
+//        {
+//            "name": "chocotest-win10",
+//            "box": "StefanScherer/windows_10",
+//            "autostart": "false",
+//            "guest_os": "windows",
+//            "provision_scripts": [
+//                {
+//                    "name": "Pin Windows PowerShell",
+//                    "path": "../shell/PinTo.ps1",
+//                    "args": "-Path 'C:\\windows\\system32\\WindowsPowerShell\\v1.0\\powershell.exe' -Taskbar -StartMenu"
+//                }
+//            ]
+//        }
     ]
 }

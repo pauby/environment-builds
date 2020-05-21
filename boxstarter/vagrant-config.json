@@ -4,23 +4,15 @@
         "cpu": "1",
         "ram": "2048",
 
-        "provider": {
-            "hyperv": {
-                "default_switch": "Default Switch"
-            }
-        },
-
-        "provision_scripts": [
+        "provisioning": [
             {
-                "name": "Provision Box",
-                "path": "box-scripts/ProvisionBox.ps1",
-                "reboot": true
+                "type": "puppet"
             }
         ],
         "folders": [
             {
-                "host_path": "../resources/packages",
-                "guest_path": "/packages"
+                "host_path": "../resources",
+                "guest_path": "/resources"
             }
         ]
     },

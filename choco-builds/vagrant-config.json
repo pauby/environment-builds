@@ -36,22 +36,22 @@
             {
                 "name": "Install Required Chocolatey Packages",
                 "path": "../shell/InstallChocoPackage.ps1",
-                "args": "-UseLocalSource -Name 'vscode, vscode-powershell, git, vivaldi, notepadplusplus, nuget.commandline, syspin'"
+                "args": "-UseLocalSource -Name 'notepadplusplus, 7zip'"
+                /*"args": "-UseLocalSource -Name 'vscode, vscode-powershell, git, vivaldi, notepadplusplus, nuget.commandline, syspin'"*/
+            }
+        ],
+
+        "provisioning": [
+            {
+                // dont need anything else here as the default are enough
+                "type": "puppet"
             }
         ],
 
         "folders": [
             {
-                "host_path": "../resources/packages",
-                "guest_path": "/packages"
-            },
-            {
-                "host_path": "auto-install",
-                "guest_path": "/auto-install"
-            },
-            {
-                "host_path": "../resources/licenses",
-                "guest_path": "/licenses"
+                "host_path": "../resources",
+                "guest_path": "/resources"
             }
         ]
     },
