@@ -1,0 +1,62 @@
+// You can add comments here
+{
+    "version": "1.0",
+    // if you have multiple machines then you can use this to specify common options.
+    "common": {
+        "cpu": "2",
+        "ram": "4096",
+
+        "provision_scripts": [
+            {
+                "name": "Configure Autologin",
+                "path": "../shared/shell/ConfigureAutoLogin.ps1"
+            },
+            {
+                "name": "Prepare Windows",
+                "path": "../shared/shell/PrepareWindows.ps1"
+            },
+            {
+                "name": "Set Region",
+                "path": "../shared/shell/SetRegion.ps1",
+                "args": "-Region 'UK'"
+            },
+            {
+                "name": "Install Chocolatey",
+                "path": "../shared/shell/InstallChocolatey.ps1",
+                "args": "-UseLocalSource"
+            },
+            {
+                "name": "Notify System of Environment Changes",
+                "path": "../shared/shell/NotifyGuiAppsOfEnvironmentChanges.ps1"
+            },
+            {
+                "name": "Install VM Guest Tools",
+                "path": "../shared/shell/InstallVMGuestTools.ps1"
+            },
+            {
+                "name": "Install Required Chocolatey Packages",
+                "path": "../shared/shell/InstallChocolateyPackage.ps1",
+                "args": "-UseLocalSource -Name 'vscode, vscode-powershell, pester, psscriptanalyzer, git, zoomit, notepadplusplus, nuget.commandline, syspin, 7zip'"
+            },
+            {
+                "name": "Local Provisioning",
+                "path": "shell/provision.ps1"
+            }
+        ],
+
+        "folders": [
+            {
+                "host_path": "../resources",
+                "guest_path": "/resources"
+            }
+        ]
+    },
+
+    "machine": [
+        {
+            "name": "presentation",
+            "box":  "StefanScherer/windows_2016",
+            "guest_os": "windows"
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "version": "1.0",
+
+    "machine": [
+        {
+            "name": "icinga2",
+            "box":  "generic/centos7",
+            "guest_os": "linux",
+            "cpu": "1",
+            "ram": "2048",
+
+            "provisioning": [
+                {
+                    "type": "puppet"
+                }
+            ],
+
+            "folders": [
+                {
+                    "host_path": "../resources/packages",
+                    "guest_path": "/packages"
+                },
+                {
+                    "host_path": "~/git",
+                    "guest_path": "/git"
+                }
+            ]
+        }
+    ]
+}
