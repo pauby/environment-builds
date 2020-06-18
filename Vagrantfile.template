@@ -131,11 +131,13 @@ Vagrant.configure("2") do |config|
       # do we have any common provisioning?
       if vagrant_config["common"] != nil and vagrant_config["common"]["provisioning"] != nil
         provisioning = vagrant_config["common"]["provisioning"]
+      else
+        provisioning = []
       end
 
       # do we have any box specific provisioning?
       if vm["provisioning"] != nil
-        provisioning.unshift(*vm["provisioning"])
+        provisioning = provisioning + vm["provisioning"]
       end
 
       if provisioning != nil

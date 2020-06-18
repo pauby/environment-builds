@@ -17,8 +17,8 @@
 
             "folders": [
                 {
-                    "host_path": "../resources/packages",
-                    "guest_path": "/packages"
+                    "host_path": "../resources",
+                    "guest_path": "/resources"
                 },
                 {
                     "host_path": "~/git",
