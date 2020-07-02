@@ -1,14 +1,15 @@
-include prepare_windows
+include pauby_vagrant_provision
 
-include set_windows_autologon
+include pauby_vagrant_provision::win_os_provision
 
-include configure_windows_networking
+include pauby_vagrant_provision::win_chocolatey_configuration_standard
 
-# The Chocolatey provider does not have the ability to install from a local
-# nupkg so install it first here.
-include chocolatey_local_install
+include pauby_vagrant_provision::win_chocolatey_source_local_add
 
-include chocolatey_configure
+# disable the Chocolatey source
+chocolateysource { 'chocolatey':
+  ensure => disabled,
+}
 
 case $operatingsystem {
   'windows': {
@@ -16,18 +17,9 @@ case $operatingsystem {
   }
 }
 
-# disable the Chocolatey source
-chocolateysource { 'chocolatey':
-  ensure => disabled,
-}
-
-include vm_guest_tools
-
-include setup_bginfo
-
 $packages_install = [ "git", "iridium-browser", "firefox", "notepadplusplus", "nuget.commandline", "syspin" ]
 package { $packages_install:
   ensure => installed,
 }
 
-# dont install any PowerShell modules here as it's importabt they are installed from the moduel build
+# dont install any PowerShell modules here as it's important they are installed from the module build
