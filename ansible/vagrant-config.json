@@ -1,0 +1,44 @@
+// You can add comments here
+{
+    "version": "1.0",
+    // if you have multiple machines then you can use this to specify common options.
+    "common": {
+        "cpu": "1",
+        "ram": "2048",
+
+        "provisioning": [
+            {
+                "name": "Configure Autologin",
+                "path": "../shared/shell/ConfigureAutoLogin.ps1",
+                "type": "shell"
+            },
+            {
+                "name": "Prepare Windows",
+                "path": "../shared/shell/PrepareWindows.ps1",
+                "type": "shell"
+            },
+            {
+                "name": "Set Region",
+                "path": "../shared/shell/SetRegion.ps1",
+                "args": "-Region 'UK'",
+                "type": "shell"
+            }
+        ],
+
+        "folders": [
+            {
+                "host_path": "../resources",
+                "guest_path": "/resources"
+            }
+        ]
+    },
+
+    "machine": [
+        {
+            "name": "win10-client",
+            "autostart": true,
+            "box": "StefanScherer/windows_10",
+            "guest_os": "windows"
+        }
+    ]
+}
