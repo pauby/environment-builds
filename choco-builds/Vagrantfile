@@ -2,19 +2,22 @@ unless Vagrant.has_plugin?("vagrant-reload")
   raise 'vagrant-reload is not installed!'
 end
 
-Vagrant.configure("2") do |config|
+unless Vagrant.has_plugin?("vagrant-dsc")
+  raise 'vagrant-dsc is not installed!'
+end
 
+Vagrant.configure("2") do |config|
     #
     # Variables
     #
     folder_syncs = [
-      { local: 'auto-install',          remote: '/auto-install' },
+#      { local: 'auto-install',          remote: '/auto-install' },
       { local: '../resources/packages', remote: '/packages' },
       { local: '../resources/licenses', remote: '/licenses' },
-      { local: '../shell',              remote: '/shell' }
+      { local: '../shared/shell',       remote: '/shell' }
     ]
 
-  config.vm.define "win2016", autostart: false
+  config.vm.define "win2019", autostart: false
 
   config.windows.halt_timeout = 60
   # https://github.com/hashicorp/vagrant/issues/6430
@@ -37,14 +40,14 @@ Vagrant.configure("2") do |config|
       config.vm.synced_folder folder[:local], folder[:remote]
   end
 
-  config.vm.provision :shell, :path => "../shell/ConfigureAutoLogin.ps1", privileged: true
-  config.vm.provision :shell, :path => "../shell/PrepareWindows.ps1", privileged: true
-  config.vm.provision :shell, :path => "../shell/SetRegion.ps1", args: "-Region 'UK'", privileged: true
-  config.vm.provision :shell, :path => "../shell/InstallChocolatey.ps1", args: "-UseLocalSource", run: "once", privileged: true
-  config.vm.provision :shell, :path => "../shell/NotifyGuiAppsOfEnvironmentChanges.ps1", privileged: true
-  config.vm.provision :shell, :path => "../shell/InstallVMGuestTools.ps1", privileged: true
-  config.vm.provision :shell, :path => "../shell/InstallStandardApps.ps1", privileged: true
-  config.vm.provision :shell, :path => "../shell/InstallBGInfo.ps1", privileged: true
+  config.vm.provision :shell, :path => "../shared/shell/ConfigureAutoLogin.ps1", privileged: true
+  # config.vm.provision :shell, :path => "../shell/PrepareWindows.ps1", privileged: true
+  # config.vm.provision :shell, :path => "../shell/SetRegion.ps1", args: "-Region 'UK'", privileged: true
+  # config.vm.provision :shell, :path => "../shell/InstallChocolatey.ps1", args: "-UseLocalSource", run: "once", privileged: true
+  # config.vm.provision :shell, :path => "../shell/NotifyGuiAppsOfEnvironmentChanges.ps1", privileged: true
+  # config.vm.provision :shell, :path => "../shell/InstallVMGuestTools.ps1", privileged: true
+  # config.vm.provision :shell, :path => "../shell/InstallStandardApps.ps1", privileged: true
+  # config.vm.provision :shell, :path => "../shell/InstallBGInfo.ps1", privileged: true
 
   config.vm.provision "Add auto-install Chocolatey Source", type: "shell", run: "once", privileged: true, inline: <<-SHELL
     choco source add -n=auto-install -s"c:\\auto-install" --priority=5
@@ -104,6 +107,13 @@ Vagrant.configure("2") do |config|
 
     override.vm.provision "Stop SMB Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
   end
+
+  config.vm.define "win2019" do |win2019|
+    win2019.vm.box = "StefanScherer/windows_2019"
+
+    win2019.vm.hostname = "choco-win2019"
+
+  end # win2016
 
   config.vm.define "win2016" do |win2016|
     win2016.vm.box = "StefanScherer/windows_2016"
