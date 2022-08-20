@@ -1,0 +1,363 @@
+﻿# NOTE THIS IS A VERY MUCH WIP FROM A NON-RUBY DEV!
+#Vagrant.require_version ">= 2.1.0"    # the before / after triggers need this version
+
+# read the config file
+vagrant_config = JSON.parse(File.read(File.join(File.dirname(__FILE__), 'vagrant-config.json')))
+
+Vagrant.configure("2") do |config|
+
+  config.vagrant.plugins = ['vagrant-reload']
+
+  # go through each server in the config file
+  vagrant_config["machine"].each do |vm|
+
+    # by default all machines will autostart
+    if vm["autostart"] == nil or vm["autostart"] == true
+      vm_autostart = true
+    else
+      vm_autostart = false
+    end
+
+    config.vm.define vm["name"], autostart: vm_autostart do |cfg|
+
+      cfg.vm.box = vm["box"]
+      if vm["box_version"] != nil
+        cfg.vm.box_version = vm["box_version"]
+      end
+      cfg.vm.hostname = vm["name"]
+
+      cfg.vm.graceful_halt_timeout = 120
+      # https://github.com/hashicorp/vagrant/issues/6430
+      cfg.winrm.retry_delay = 10
+
+      cfg.winrm.username = "vagrant"
+      cfg.winrm.password = "vagrant"
+      cfg.vm.guest = vm["guest_os"]
+
+      cfg.windows.set_work_network = true
+      if vm["ip_address"] != nil
+        cfg.vm.network :private_network, ip: vm["ip_address"]
+      end
+
+      # set the communicator for the virtual machine
+      if vm["guest_os"] == "linux"
+        # for linux we ignore what the communicator is set to as it can only be ssh
+        cfg.vm.communicator = "ssh"
+      else
+        if vm["communicator"] != nil
+          cfg.vm.communicator = vm["communicator"]
+        elsif vagrant_config["common"] != nil and vagrant_config["common"]["communicator"] != nil
+          cfg.vm.communicator = vagrant_config["common"]["communicator"]
+        else
+          cfg.vm.communicator = "winrm"   # this is the default
+        end
+
+        # if we are running ssh on Windows disable key insertion
+        if cfg.vm.communicator == "ssh"
+          cfg.ssh.insert_key = false
+        end
+      end
+
+      if vm["guest_os"] == "windows"
+        # Port forward WinRM / RDP
+        # Vagrant 1.9.3 - if you run into Errno::EADDRNOTAVAIL (https://github.com/mitchellh/vagrant/issues/8395),
+        #  add host_ip: "127.0.0.1" for it to work
+        # WinRM port is changed from default to allow it to work on systems that already have WinRM setup (See https://github.com/chocolatey-community/chocolatey-test-environment/pull/44)
+        cfg.vm.network :forwarded_port, guest: 5985, host: 55985, id: "winrm", auto_correct: true, host_ip: "127.0.0.1"
+        cfg.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
+        cfg.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
+      elsif vm["guest_os"] == "linux"
+        cfg.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
+      end
+
+      # see if we have any additional custom ports
+      # common ports?
+      if vagrant_config["forwarded_ports"] != nil
+        vagrant_config["forwarded_ports"].each do |port|
+          cfg.vm.network :forwarded_port, guest: fport["guest_port"], host: port["host_port"], id: port["name"], auto_correct: true, host_ip: port["host_ip"]
+        end
+      end
+
+      # box ports
+      if vm["forwarded_ports"] != nil
+        vm["forwarded_ports"].each do |port|
+          cfg.vm.network :forwarded_port, guest: port["guest_port"], host: port["host_port"], id: port["name"], auto_correct: true, host_ip: port["host_ip"]
+        end
+      end
+
+      # check if we have any synced folders otherwise add default ones
+      # common folders?
+      if (vagrant_config["common"] != nil and vagrant_config["common"]["disable_folders"] != true) or vm["disable_folders"] != true
+        if vagrant_config["common"] != nil and vagrant_config["common"]["folders"] != nil
+          vagrant_config["common"]["folders"].each do |folder|
+            cfg.vm.synced_folder folder["host_path"], folder["guest_path"]
+          end
+        end
+
+        if vm["folders"] != nil
+          vm["folders"].each do |folder|
+            #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
+            cfg.vm.synced_folder folder["host_path"], folder["guest_path"]
+          end
+        end
+      end
+
+      # always sync these folders
+#      cfg.vm.synced_folder ".", "/vagrant"
+#      cfg.vm.synced_folder "../shell", "/shell"
+
+      # do we have any common provisioning scripts?
+#      if vagrant_config["common"] != nil and vagrant_config["common"]["provision_scripts"] != nil
+#        vagrant_config["common"]["provision_scripts"].each do |common_script|
+
+#          common_name = common_script["path"]
+#          if common_script["name"] != nil
+#            common_name = common_script["name"]
+#          end
+
+#          common_args = ""
+#          if common_script["args"] != nil
+#            common_args = common_script["args"]
+#          end
+
+#          cfg.vm.provision common_name, type: "shell", path: common_script["path"], args: common_args, privileged: true
+
+#          if common_script["reboot"] == true
+#            cfg.vm.provision :reload
+#          end # if
+#        end #do
+#      end # if
+
+      # do we have any common provisioning?
+      if vagrant_config["common"] != nil and vagrant_config["common"]["provisioning"] != nil
+        provisioning = vagrant_config["common"]["provisioning"]
+      else
+        provisioning = []
+      end
+
+      # do we have any box specific provisioning?
+      if vm["provisioning"] != nil
+        provisioning = provisioning + vm["provisioning"]
+      end
+
+      if provisioning != nil
+        provisioning.each do |provision_config|
+
+          if provision_config["type"] == "shell"
+
+            provision_name = provision_config["path"]
+            if provision_config["name"] != nil
+              provision_name = provision_config["name"]
+            end
+
+            provision_args = ""
+            if provision_config["args"] != nil
+              provision_args = provision_config["args"]
+            end
+
+            cfg.vm.provision provision_name, type: "shell", path: provision_config["path"], args: provision_args, privileged: true
+
+            if provision_config["reboot"] == true
+              cfg.vm.provision :reload
+            end # if
+          elsif provision_config["type"] == "puppet"
+
+            if vm["guest_os"] == "windows"
+              # set WinRm shell memory and install puppet agent - version doesn't matter at the moment as we will upgrade it with Chocolatey
+              cfg.vm.provision "Installing Puppet Agent ...", type: "shell", run: "once", privileged: true, inline: <<-SHELL
+                winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="2048"}'
+                if (-not (Get-Command -Name 'puppet.exe' -ErrorAction SilentlyContinue)) {
+                  Copy-Item -Path c:\\resources\\installers\\puppet-agent-6.14.0-x64.msi -Destination $HOME\\Documents
+                  Start-Process -FilePath $HOME\\Documents\\puppet-agent-6.14.0-x64.msi \`
+                    -ArgumentList "/qn", "/norestart", "/l*v pp.log" -Wait
+                }
+              SHELL
+            end
+
+            cfg.vm.provision :puppet do |puppet|
+              # puppet.facter = {
+              #   "hostuser" => ENV['USERNAME']
+              #}
+
+              puppet.manifests_path = "puppet/manifests"
+              if provision_config["manifests_path"] != nil
+                puppet.manifests_path = provision_config["manifests_path"]
+              end
+
+              puppet.module_path = [ "../shared/puppet/modules", "../resources/puppet/modules" ]
+              if provision_config["module_path"] != nil
+                puppet.module_path = provision_config["module_path"]
+              end
+
+              puppet.manifest_file = "provision.pp"
+              if provision_config["manifest_file"] != nil
+                puppet.manifest_file = provision_config["manifest_file"]
+              end
+
+              #puppet.options = "--verbose" #--debug"
+              if provision_config["options"] != nil
+                puppet.options = provision_config["options"]
+              end
+
+              if provision_config["facter"] != nil
+                puppet.facter = provision_config["facter"]
+              end
+
+    #          puppet.facter = {
+    #            "domain" => "local",
+    #            "kernel" => "windows",
+    #            "operatingsystem" => "windows",
+    #            "osfamily" => "windows",
+    #          }
+            end #cfg puppet
+          elsif provision_config["type"] == "file"
+
+            provision_name = provision_config["source"] + " to " + provision_config["destination"]
+            if provision_config["name"] != nil
+              provision_name = provision_config["name"]
+            end
+
+            cfg.vm.provision provision_name, type: "file", source: provision_config["source"], destination: provision_config["destination"]
+          end # if
+        end #do
+      end # if
+
+      # do we have any box provisioning scripts?
+#      if vm["provision_scripts"] != nil
+#        vm["provision_scripts"].each do |script|
+
+#          name = script["path"]
+#          if script["name"] != nil
+#            name = script["name"]
+#          end
+
+#          args = ""
+#          if script["args"] != nil
+#            args = script["args"]
+#          end
+
+#          cfg.vm.provision name, type: "shell", path: script["path"], args: args, privileged: true
+
+#          if script["reboot"] == true
+#            cfg.vm.provision :reload
+#          end # if
+#        end #do
+#      end # if
+
+      if vm["guest_up_message"] != nil
+        cfg.vm.post_up_message = vm["guest_up_message"]
+      end
+
+      # Providers
+      # set cpu and ram if it's in common section
+      if vagrant_config["common"] != nil and vagrant_config["common"]["cpu"] != nil
+        cpu = vagrant_config["common"]["cpu"]
+      else
+        cpu = vm["cpu"]
+      end
+
+      if vagrant_config["common"] != nil and vagrant_config["common"]["ram"] != nil
+        ram = vagrant_config["common"]["ram"]
+      else
+        ram = vm["ram"]
+      end
+
+      cfg.vm.provider :virtualbox do |v, override|
+        # do we have a virtualbox provider box name
+        # the if for each section has to be done this way rather that one big vm["provider"]["hyperv"]["avc"]
+        # if any part is missing it errors
+        if vm["provider"] != nil and vm["provider"]["virtualbox"] != nil
+          if vm["provider"]["virtualbox"]["box"] != nil
+            override.vm.box = vm["provider"]["virtualbox"]["box"]
+          end
+
+          if vm["provider"]["virtualbox"]["box_version"]
+            override.vm.box_version = vm["provider"]["hyperv"]["box_version"]
+          end
+        end
+
+        v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+        v.gui = true
+        v.customize ["modifyvm", :id, "--cpus", cpu]
+        # turn on nested virtualization
+        v.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+        v.customize ["modifyvm", :id, "--vram", 150]
+        v.customize ["modifyvm", :id, "--memory", ram]
+        v.customize ["modifyvm", :id, "--audio", "none"]
+        v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+        v.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
+        v.customize ["modifyvm", :id, "--usb", "off"]
+        v.linked_clone = true
+      end # virtualbox provider
+
+      config.vm.provider :hyperv do |v, override|
+        # the if for each section has to be done this way rather that one big vm["provider"]["hyperv"]["avc"]
+        # if any part is missing it errors
+        if vm["provider"] != nil and vm["provider"]["hyperv"] != nil
+          if vm["provider"]["hyperv"]["box"] != nil
+            override.vm.box = vm["provider"]["hyperv"]["box"]
+          end
+
+          if vm["provider"]["hyperv"]["box_version"]
+            override.vm.box_version = vm["provider"]["hyperv"]["box_version"]
+          end
+        end
+
+        # check the default_switch for the machine first of all as it will
+        if ENV['VAGRANT_HYPERV_NETWORK_SWITCH'] != nil
+          override.vm.network "public_network", bridge: ENV['VAGRANT_HYPERV_NETWORK_SWITCH']
+        end
+        # if vm["provider"] != nil and vm["provider"]["hyperv"] != nil and vm["provider"]["hyperv"]["default_switch"] != nil
+        #   override.vm.network "public_network", bridge: vm["provider"]["hyperv"]["default_switch"]
+        # elsif vagrant_config["common"] != nil and vagrant_config["common"]["provider"] != nil and vagrant_config["common"]["provider"]["hyperv"] != nil and vagrant_config["common"]["provider"]["hyperv"]["default_switch"] != nil
+        #   override.vm.network "public_network", bridge: vagrant_config["common"]["provider"]["hyperv"]["default_switch"]
+        # end
+
+        v.enable_virtualization_extensions = true
+        v.maxmemory = ram
+        v.memory = ram
+        v.cpus = cpu
+        v.ip_address_timeout = 130
+        v.linked_clone = true
+        v.vm_integration_services = {
+          guest_service_interface: true,
+          heartbeat: true,
+          key_value_pair_exchange: true,
+          shutdown: true,
+          time_synchronization: true,
+          vss: true
+        }
+
+        # if we have created environment variables for username and password
+        # then override the folders being synced to use them
+        if ENV['VAGRANT_HYPERV_SMB_USERNAME'] != nil and ENV['VAGRANT_HYPERV_SMB_PASSWORD'] != nil
+          if (vagrant_config["common"] != nil and vagrant_config["common"]["disable_folders"] != true) or vm["disable_folders"] != true
+            if vagrant_config["common"] != nil and vagrant_config["common"]["folders"] != nil
+              vagrant_config["common"]["folders"].each do |folder|
+                override.vm.synced_folder folder["host_path"], folder["guest_path"], smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+              end
+            end
+
+            if vm["folders"] != nil
+              vm["folders"].each do |folder|
+                #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
+                override.vm.synced_folder folder["host_path"], folder["guest_path"], smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+              end # each
+            end
+          end #if
+
+          # always sync these folders unless folders are disabled
+#          if (vagrant_config["common"] != nil and vagrant_config["common"]["disable_folders"] != true) or vm["disable_folders"] != true
+#            override.vm.synced_folder ".", "/vagrant", smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+#            override.vm.synced_folder "../shell", "/shell", smb_username: ENV['VAGRANT_HYPERV_SMB_USERNAME'], smb_password: ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+#          end
+
+          if vm["guest_os"] == "windows"
+            override.vm.provision "Stop Hyper-V SMB Synced Folders Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
+          end
+        end # if
+      end #hyperv provider
+
+    end # box config
+  end # box config loop
+end #vagrant configure
