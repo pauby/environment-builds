@@ -2,71 +2,95 @@ unless Vagrant.has_plugin?("vagrant-reload")
   raise 'vagrant-reload is not installed!'
 end
 
-unless Vagrant.has_plugin?("vagrant-dsc")
-  raise 'vagrant-dsc is not installed!'
-end
-
-Vagrant.configure("2") do |config|
+Vagrant.configure("2") do |cfg|
     #
     # Variables
     #
     folder_syncs = [
-#      { local: 'auto-install',          remote: '/auto-install' },
-      { local: '../resources/packages', remote: '/packages' },
-      { local: '../resources/licenses', remote: '/licenses' },
-      { local: '../shared/shell',       remote: '/shell' }
+      { local: '../shared/assets',      remote: '/assets' },
+      { local: '../resources/packages', remote: '/resources/packages' },
+#      { local: '../resources/licenses', remote: '/resources/licenses' },
+      { local: '../shared/shell',       remote: '/shell' },
+#      { local: '../../',                remote: '/git' }
     ]
 
-  config.vm.define "win2019", autostart: false
+  cfg.vm.define "win2008r2" do |config|
+    config.vm.box = "pauby/windows-2008r2-x64"
+    config.vm.hostname = 'win2008r2-1'
+  end
 
-  config.windows.halt_timeout = 60
+  cfg.vm.define "win2012r2" do |config|
+    config.vm.box = 'ferventcoder/win2012r2-x64-nocm'
+    config.vm.hostname = 'win2012r2-1'
+  end
+
+  cfg.vm.define "win2016" do |config|
+    config.vm.box = 'StefanScherer/windows_2016'
+    config.vm.hostname = 'win2016-1'
+  end
+
+  cfg.vm.define "win2019" do |config|
+    config.vm.box = 'StefanScherer/windows_2019'
+    config.vm.hostname = 'win2019-1'
+  end
+
+  cfg.vm.define "win10" do |config|
+    config.vm.box = 'StefanScherer/windows_10'
+    config.vm.hostname = 'win10-1'
+  end
+
+  cfg.windows.halt_timeout = 120
   # https://github.com/hashicorp/vagrant/issues/6430
-  config.winrm.retry_limit = 30
-  config.winrm.retry_delay = 10
+  cfg.winrm.retry_limit = 30
+  cfg.winrm.retry_delay = 10
 
-  config.winrm.username = "vagrant"
-  config.winrm.password = "vagrant"
-  config.vm.guest = :windows
-  config.vm.communicator = "winrm"
+  cfg.winrm.username = "vagrant"
+  cfg.winrm.password = "vagrant"
+  cfg.vm.guest = :windows
+  cfg.vm.communicator = "winrm"
 
-  config.windows.set_work_network = true
+  cfg.windows.set_work_network = true
 
-  config.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true, host_ip: "127.0.0.1"
-  config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
-  config.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
+  cfg.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true #, host_ip: "127.0.0.1"
+  cfg.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true #, host_ip: "127.0.0.1"
 
   folder_syncs.each do |folder|
       #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
-      config.vm.synced_folder folder[:local], folder[:remote]
+      cfg.vm.synced_folder folder[:local], folder[:remote]
   end
 
-  config.vm.provision :shell, :path => "../shared/shell/ConfigureAutoLogin.ps1", privileged: true
-  # config.vm.provision :shell, :path => "../shell/PrepareWindows.ps1", privileged: true
-  # config.vm.provision :shell, :path => "../shell/SetRegion.ps1", args: "-Region 'UK'", privileged: true
-  # config.vm.provision :shell, :path => "../shell/InstallChocolatey.ps1", args: "-UseLocalSource", run: "once", privileged: true
-  # config.vm.provision :shell, :path => "../shell/NotifyGuiAppsOfEnvironmentChanges.ps1", privileged: true
-  # config.vm.provision :shell, :path => "../shell/InstallVMGuestTools.ps1", privileged: true
-  # config.vm.provision :shell, :path => "../shell/InstallStandardApps.ps1", privileged: true
-  # config.vm.provision :shell, :path => "../shell/InstallBGInfo.ps1", privileged: true
+  # All PowerShell scripts / executions must have privileged: true or they will error on provisioning
+  # See https://github.com/hashicorp/vagrant/issues/9138
+  cfg.vm.provision :shell, :path => "../shared/shell/ConfigureAutoLogin.ps1", privileged: true
+  cfg.vm.provision :shell, :path => "../shared/shell/PrepareWindows.ps1", privileged: true
+  cfg.vm.provision :shell, :path => "../shared/shell/SetRegion.ps1", args: "-Region 'UK'", privileged: true
+  cfg.vm.provision :shell, :path => "../shared/shell/DisableTaskbarClock.ps1", privileged: true
+  cfg.vm.provision :shell, :path => "../shared/shell/InstallChocolatey.ps1", args: "-UseLocalSource", run: "once", privileged: true
+  cfg.vm.provision :shell, :path => "../shared/shell/NotifyGuiAppsOfEnvironmentChanges.ps1", run: "once", privileged: true
+  cfg.vm.provision :shell, :path => "../shared/shell/InstallVMGuestTools.ps1", run: "once", privileged: true
+  # This is very distracting during presenting so commenting it out - don't delete so we know why it's not used
+  # cfg.vm.provision :shell, :path => "../shared/shell/InstallBGInfo.ps1", privileged: true
+  cfg.vm.provision :shell, :path => "../shared/shell/InstallChocolateyPackage.ps1", args: "-UseLocalSource -Name 'notepadplusplus, 7zip'", run: "once", privileged: true
 
-  config.vm.provision "Add auto-install Chocolatey Source", type: "shell", run: "once", privileged: true, inline: <<-SHELL
-    choco source add -n=auto-install -s"c:\\auto-install" --priority=5
+  cfg.vm.provision "Setting additional configuration ...", type: "shell", run: "once", privileged: true, inline: <<-SHELL
+    # To set the background to #004568 we need to also blank the default wallpaper value
+    # See https://www.rapidtables.com/web/color/RGB_Color.html to convert to RGB
+    Set-ItemProperty -Path 'HKCU:Control Panel\\Colors' -Name 'Background' -Value '9 59 134'
+    Set-ItemProperty -Path 'HKCU:Control Panel\\Desktop' -Name 'Wallpaper' -Value ''
   SHELL
 
   # reload machine to have the auto-login and bginfo kick in
-  config.vm.provision :reload
+  cfg.vm.provision :reload
 
-  config.vm.post_up_message = "All done!"
-
-  config.vm.provider :virtualbox do |v, override|
-    #override.vm.network :private_network, ip: "10.10.13.14"
+  cfg.vm.provider :virtualbox do |v, override|
+    override.vm.network :public_network, ip: "172.27.187.224"
     v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
     v.gui = true
-    v.customize ["modifyvm", :id, "--cpus", "1"]
+    v.customize ["modifyvm", :id, "--cpus", "4"]
     # turn on nested virtualization
     v.customize ["modifyvm", :id, "--nested-hw-virt", "off"]
     v.customize ["modifyvm", :id, "--vram", 128]
-    v.customize ["modifyvm", :id, "--memory", "2048"]
+    v.customize ["modifyvm", :id, "--memory", "8192"]
     v.customize ["modifyvm", :id, "--audio", "none"]
     v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
     v.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
@@ -75,13 +99,13 @@ Vagrant.configure("2") do |config|
     v.linked_clone = true if Vagrant::VERSION >= '1.8.0'
   end
 
-  # https://www.vagrantup.com/docs/hyperv/configuration.html
+  # https://www.vagrantup.com/docs/hyperv/cfguration.html
   # https://technet.microsoft.com/en-us/library/dn798297(v=ws.11).aspx
-  config.vm.provider :hyperv do |v, override|
-    override.vm.network "public_network", bridge: "Default Switch"
+  cfg.vm.provider :hyperv do |v, override|
+    override.vm.network "public_network", bridge: "Default Switch", ip: "172.27.187.224"
     v.enable_virtualization_extensions = false
-    v.maxmemory = 2048
-    v.cpus = 1
+    v.maxmemory = 8192
+    v.cpus = 4
     v.ip_address_timeout = 130
     v.linked_clone = true
     v.vm_integration_services = {
@@ -93,45 +117,24 @@ Vagrant.configure("2") do |config|
       vss: true
     }
 
-    smbcreds_filename = '../vagrant-smb.txt'
+    smbcreds_filename = ENV['HOME'] + '/secret-vagrant-smb.txt'
     if File.exists?(smbcreds_filename)
       file_data = File.read(smbcreds_filename).split
       smbusername = file_data[0]
       smbpassword = file_data[1]
+    elsif ENV['VAGRANT_HYPERV_SMB_USERNAME'] != nil and ENV['VAGRANT_HYPERV_SMB_PASSWORD'] != nil
+      smbusername = ENV['VAGRANT_HYPERV_SMB_USERNAME']
+      smbpassword = ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+    end
 
+    # if these are not set and Hyper-V is used then username and password will be prompted for
+    if smbusername != nil and smbpassword != nil
       folder_syncs.each do |folder|
         #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
         override.vm.synced_folder folder[:local], folder[:remote], smb_username: smbusername, smb_password: smbpassword
       end
-    end # hyper-v providwr
+    end # if
 
     override.vm.provision "Stop SMB Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
-  end
-
-  config.vm.define "win2019" do |win2019|
-    win2019.vm.box = "StefanScherer/windows_2019"
-
-    win2019.vm.hostname = "choco-win2019"
-
-  end # win2016
-
-  config.vm.define "win2016" do |win2016|
-    win2016.vm.box = "StefanScherer/windows_2016"
-
-    win2016.vm.hostname = "choco-win2016"
-
-  end # win2016
-
-  config.vm.define "win10" do |win10|
-    win10.vm.box = "StefanScherer/windows_10"
-
-    win10.vm.hostname = "choco-win10"
-
-  end # win10
-
-  config.vm.define "win2012r2" do |win2012r2|
-    win2012r2.vm.box = "devopsguys/Windows2012R2Eval"
-
-    win2012r2.vm.hostname = "choco-win2012r2"
-  end # win2012r2
+  end # hyper-v provider
 end
