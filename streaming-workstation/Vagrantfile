@@ -11,7 +11,7 @@ Vagrant.configure("2") do |config|
       { local: '../resources/packages', remote: '/resources/packages' },
 #      { local: '../resources/licenses', remote: '/resources/licenses' },
       { local: '../shared/shell',       remote: '/shell' },
-      { local: '../../',                remote: '/git' }
+#      { local: '../../',                remote: '/git' }
     ]
 
   config.vm.define "win2019" do |cfg|
@@ -33,11 +33,6 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true #, host_ip: "127.0.0.1"
     cfg.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true #, host_ip: "127.0.0.1"
-
-    folder_syncs.each do |folder|
-        #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
-        cfg.vm.synced_folder folder[:local], folder[:remote]
-    end
 
     # All PowerShell scripts / executions must have privileged: true or they will error on provisioning
     # See https://github.com/hashicorp/vagrant/issues/9138
@@ -77,6 +72,19 @@ Before you start.
    If you are going to use VS Code, you will need to sign in to GitHub first to
    sync settings.
 
+2. Connect and authenticate with GitHub.
+
+3. Run:
+    git --global --add user.name "Paul Broadwith"
+    git --global --add user.email "paul@pauby.com"
+
+4. Set the Windows PowerShell console font size to 20.
+
+5. As a NORMAL USER create a folder called git and clone the project you are
+   working on in there.
+
+6. Set the default Firefox search engine to StartPage.
+
 MSG
 
 
@@ -97,7 +105,13 @@ MSG
       v.customize ["modifyvm", :id, "--usb", "off"]
       # linked clones for speed and size
       v.linked_clone = true if Vagrant::VERSION >= '1.8.0'
-    end
+
+
+      folder_syncs.each do |folder|
+        #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
+        override.vm.synced_folder folder[:local], folder[:remote]
+      end
+    end # virtualbox provider
 
     # https://www.vagrantup.com/docs/hyperv/cfguration.html
     # https://technet.microsoft.com/en-us/library/dn798297(v=ws.11).aspx
@@ -136,6 +150,42 @@ MSG
       end # hyper-v provider
 
       override.vm.provision "Stop SMB Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
-    end
+    end # hyperv provider
+
+    cfg.vm.provider :libvirt do |libvirt, override|
+
+      override.vm.box = "jborean93/WindowsServer2019"
+
+      libvirt.memory = 8192
+      libvirt.cpus = 4
+
+      override.vm.synced_folder '/.', '/vagrant', disabled: true
+
+      override.vm.provision "Create network share 'Share' on 'c:\\share'", type: "shell", privileged: false, inline: <<-SHELL
+        # create a network share so that we can connect and share files via a remote SMB share
+        if (-not (Test-Path -Path 'c:\\share')) {
+          New-Item -Path 'c:\\share' -ItemType Directory -Force
+        }
+        net share Share=c:\\share /grant:everyone,full
+      SHELL
+
+      # libvirt.driver = 'kvm'
+      # libvirt.connect_via_ssh = false
+      # libvirt.username = 'root'
+      # libvirt.storage_pool_name = 'default'
+
+      # # Enable Hyper-V enlightments: https://blog.wikichoon.com/2014/07/enabling-hyper-v-enlightenments-with-kvm.html
+      # # Also see https://github.com/kubevirt/kubevirt/issues/1919#issue-396952226
+      # libvirt.hyperv_feature :name => 'relaxed',  :state => 'on'
+      # libvirt.hyperv_feature :name => 'vapic',    :state => 'on'
+      # libvirt.hyperv_feature :name => 'stimer',   :state => 'on'
+      # libvirt.hyperv_feature :name => 'synic',    :state => 'on'
+      # libvirt.hyperv_feature :name => 'vapic',    :state => 'on'
+      # libvirt.hyperv_feature :name => 'vpindex',  :state => 'on'
+      # libvirt.hyperv_feature :name => 'frequencies',  :state => 'on'
+      # libvirt.hyperv_feature :name => 'reenlightenment',  :state => 'on'
+      # libvirt.hyperv_feature :name => 'tlbflush',  :state => 'on'
+
+    end # libvirt provider
   end
 end
