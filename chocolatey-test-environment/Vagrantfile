@@ -1,18 +1,28 @@
-﻿unless Vagrant.has_plugin?("vagrant-reload")
-  raise 'vagrant-reload is not installed!'
+﻿REQUIRED_PLUGINS = %w(vagrant-reload)
+exit unless REQUIRED_PLUGINS.all? do |plugin|
+  Vagrant.has_plugin?(plugin) || (
+    puts "The #{plugin} plugin is required. Please install it with:"
+    puts "$ vagrant plugin install #{plugin}"
+    false
+  )
 end
+
+memory = 4096
+cpu = 1 
 
 # http://docs.vagrantup.com/v2/vagrantfile/machine_settings.html
 Vagrant.configure("2") do |config|
 
   folder_syncs = [
     { local: 'auto-install', remote: '/auto-install' },
-    { local: '../resources/packages', remote: '/packages' },
+    { local: '../resources/packages', remote: '/resources/packages' },
     { local: '../shared/shell',              remote: '/shell' }
   ]
 
-  config.vm.box = "chocolatey/test-environment"
-  config.vm.box_version = "2.0.0"
+  #config.vm.box = "chocolatey/test-environment"
+  #config.vm.box_version = "2.0.0"
+  config.vm.box = "jborean93/WindowsServer2019"
+  config.vm.box_check_update = false
 
   config.windows.halt_timeout = 60
   config.winrm.retry_limit = 30
@@ -29,14 +39,22 @@ Vagrant.configure("2") do |config|
   config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
   config.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
 
-  folder_syncs.each do |folder|
-    config.vm.synced_folder folder[:local], folder[:remote]
+  config.vm.provision "Preparing Windows ...", type: "shell", path: "../shared/shell/PrepareWindows.ps1", privileged: true
+  installChocoArgs = "-UseLocalSource"
+  config.vm.provider :libvirt do |libvirt|
+    if ENV['INTERNAL_CHOCOLATEY_PACKAGES_PATH'] != nil
+      installChocoArgs = "-UseLocalSource -LocalSourcePath #{ENV['INTERNAL_CHOCOLATEY_PACKAGES_PATH']}"
+    end
   end
-
-  config.vm.provision :shell, :path => "../shared/shell/PrepareWindows.ps1", privileged: true
-  config.vm.provision :shell, :path => "../shared/shell/InstallChocolatey.ps1", args: "-UseLocalSource", privileged: true
+  config.vm.provision "Installing and configuring Chocolatey CLI ...", type: "shell", path: "../shared/shell/InstallChocolatey.ps1", args: installChocoArgs, privileged: true
+  config.vm.provision "Disabling taskbar clock ...", type: "shell", path: "../shared/shell/DisableTaskbarClock.ps1", privileged: true
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
     choco source add -n=auto-install -s"c:\\auto-install" --priority=5
+
+    # To set the background to #004568 we need to also blank the default wallpaper value
+    # See https://www.rapidtables.com/web/color/RGB_Color.html to convert to RGB
+    Set-ItemProperty -Path 'HKCU:Control Panel\\Colors' -Name 'Background' -Value '9 59 134'
+    Set-ItemProperty -Path 'HKCU:Control Panel\\Desktop' -Name 'Wallpaper' -Value ''
   SHELL
   #config.vm.provision :shell, :path => "../shared/shell/InstallBGInfo.ps1", privileged: true
 
@@ -67,56 +85,97 @@ if ($validExitCodes -contains $exitCode) {
 Exit $exitCode
 SCRIPT
 
-  config.vm.provider :virtualbox do |v, override|
-    v.gui = true
-    v.customize ["modifyvm", :id, "--memory", "4096"]
-    v.customize ["modifyvm", :id, "--cpus", "1"]
-    v.customize ["modifyvm", :id, "--vram", 128]
-    v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
-    v.customize ["modifyvm", :id, "--audio", "none"]
-    v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
-    v.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
-    v.customize ["modifyvm", :id, "--usb", "off"]
-    v.linked_clone = true if Vagrant::VERSION >= '1.8.0'
-  end
-
   config.vm.provision :shell, :inline => $packageTestScript, privileged: true
 
-      config.vm.provider :hyperv do |v, override|
-      override.vm.network "public_network", bridge: "Default Switch"
+  config.vm.provider :virtualbox do |virtualbox, override|
+    virtualbox.gui = true
+    virtualbox.customize ["modifyvm", :id, "--memory", memory]
+    virtualbox.customize ["modifyvm", :id, "--cpus", cpu]
+    virtualbox.customize ["modifyvm", :id, "--vram", 128]
+    virtualbox.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    virtualbox.customize ["modifyvm", :id, "--audio", "none"]
+    virtualbox.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+    virtualbox.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
+    virtualbox.customize ["modifyvm", :id, "--usb", "off"]
+    virtualbox.linked_clone = true if Vagrant::VERSION >= '1.8.0'
 
-      v.enable_virtualization_extensions = true
-      v.maxmemory = 4096
-      v.cpus = 1
-      v.ip_address_timeout = 130
-      v.linked_clone = true
-      v.vm_integration_services = {
-        guest_service_interface: true,
-        heartbeat: true,
-        key_value_pair_exchange: true,
-        shutdown: true,
-        time_synchronization: true,
-        vss: true
-      }
+    folder_syncs.each do |folder|
+      override.vm.synced_folder folder[:local], folder[:remote]
+    end
+  end
 
-      smbcreds_filename = '../secret-vagrant-smb.txt'
-      if File.exists?(smbcreds_filename)
-        file_data = File.read(smbcreds_filename).split
-        smbusername = file_data[0]
-        smbpassword = file_data[1]
-      elsif ENV['VAGRANT_HYPERV_SMB_USERNAME'] != nil and ENV['VAGRANT_HYPERV_SMB_PASSWORD'] != nil
-        smbusername = ENV['VAGRANT_HYPERV_SMB_USERNAME']
-        smbpassword = ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+  config.vm.provider :hyperv do |hyperv, override|
+    override.vm.network "public_network", bridge: "Default Switch"
+
+    hyperv.enable_virtualization_extensions = true
+    hyperv.maxmemory = memory
+    hyperv.cpus = cpu
+    hyperv.ip_address_timeout = 130
+    hyperv.linked_clone = true
+    hyperv.vm_integration_services = {
+      guest_service_interface: true,
+      heartbeat: true,
+      key_value_pair_exchange: true,
+      shutdown: true,
+      time_synchronization: true,
+      vss: true
+    }
+
+    smbcreds_filename = '../secret-vagrant-smb.txt'
+    if File.exists?(smbcreds_filename)
+      file_data = File.read(smbcreds_filename).split
+      smbusername = file_data[0]
+      smbpassword = file_data[1]
+    elsif ENV['VAGRANT_HYPERV_SMB_USERNAME'] != nil and ENV['VAGRANT_HYPERV_SMB_PASSWORD'] != nil
+      smbusername = ENV['VAGRANT_HYPERV_SMB_USERNAME']
+      smbpassword = ENV['VAGRANT_HYPERV_SMB_PASSWORD']
+    end
+
+    # if these are not set and Hyper-V is used then username and password will be prompted for
+    if smbusername != nil and smbpassword != nil
+      folder_syncs.each do |folder|
+        #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
+        override.vm.synced_folder folder[:local], folder[:remote], smb_username: smbusername, smb_password: smbpassword
       end
-
-      # if these are not set and Hyper-V is used then username and password will be prompted for
-      if smbusername != nil and smbpassword != nil
-        folder_syncs.each do |folder|
-          #print "Folder sync local: #{folder[:local]} | remote: #{folder[:remote]} | smb_username: #{folder[:smb_username]} | smb_password: #{folder[:smb_password]}"
-          override.vm.synced_folder folder[:local], folder[:remote], smb_username: smbusername, smb_password: smbpassword
-        end
-      end # hyper-v provider
+    end
 
       override.vm.provision "Stop SMB Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
-    end
+  end # hyper-v provider
+
+  config.vm.provider :libvirt do |libvirt, override|
+    # See https://vagrant-libvirt.github.io/vagrant-libvirt/configuration.html
+    libvirt.memory = memory
+    libvirt.cpus = cpu
+
+    #! getting shared folders from libvirt host to a windows guest is difficult and I havent
+    #! quite worked out how best to do it.
+    override.vm.synced_folder '/.', '/vagrant', disabled: true
+
+    #! I don't think we need this - C$ is shared by default
+    # override.vm.provision "Create network share 'Share' on 'c:\\share'", type: "shell", privileged: false, inline: <<-SHELL
+    #   # create a network share so that we can connect and share files via a remote SMB share
+    #   if (-not (Test-Path -Path 'c:\\share')) {
+    #     New-Item -Path 'c:\\share' -ItemType Directory -Force
+    #   }
+    #   net share Share=c:\\share /grant:everyone,full
+    # SHELL
+
+    # libvirt.driver = 'kvm'
+    # libvirt.connect_via_ssh = false
+    # libvirt.username = 'root'
+    # libvirt.storage_pool_name = 'default'
+
+    # # Enable Hyper-V enlightments: https://blog.wikichoon.com/2014/07/enabling-hyper-v-enlightenments-with-kvm.html
+    # # Also see https://github.com/kubevirt/kubevirt/issues/1919#issue-396952226 
+    # libvirt.hyperv_feature :name => 'relaxed',  :state => 'on'
+    # libvirt.hyperv_feature :name => 'vapic',    :state => 'on'
+    # libvirt.hyperv_feature :name => 'stimer',   :state => 'on'
+    # libvirt.hyperv_feature :name => 'synic',    :state => 'on'
+    # libvirt.hyperv_feature :name => 'vapic',    :state => 'on'
+    # libvirt.hyperv_feature :name => 'vpindex',  :state => 'on'
+    # libvirt.hyperv_feature :name => 'frequencies',  :state => 'on'
+    # libvirt.hyperv_feature :name => 'reenlightenment',  :state => 'on'
+    # libvirt.hyperv_feature :name => 'tlbflush',  :state => 'on'
+
+  end # libvirt provider
 end
