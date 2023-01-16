@@ -7,6 +7,9 @@ exit unless REQUIRED_PLUGINS.all? do |plugin|
   )
 end
 
+memory = 4096
+cpu = 1 
+
 # http://docs.vagrantup.com/v2/vagrantfile/machine_settings.html
 Vagrant.configure("2") do |config|
 
@@ -36,9 +39,15 @@ Vagrant.configure("2") do |config|
   config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
   config.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
 
-  config.vm.provision :shell, :path => "../shared/shell/PrepareWindows.ps1", privileged: true
-  config.vm.provision :shell, :path => "../shared/shell/InstallChocolatey.ps1", args: "-UseLocalSource -Force", privileged: true
-  config.vm.provision :shell, :path => "../shared/shell/DisableTaskbarClock.ps1", privileged: true
+  config.vm.provision "Preparing Windows ...", type: "shell", path: "../shared/shell/PrepareWindows.ps1", privileged: true
+  installChocoArgs = "-UseLocalSource"
+  config.vm.provider :libvirt do |libvirt|
+    if ENV['INTERNAL_CHOCOLATEY_PACKAGES_PATH'] != nil
+      installChocoArgs = "-UseLocalSource -LocalSourcePath #{ENV['INTERNAL_CHOCOLATEY_PACKAGES_PATH']}"
+    end
+  end
+  config.vm.provision "Installing and configuring Chocolatey CLI ...", type: "shell", path: "../shared/shell/InstallChocolatey.ps1", args: installChocoArgs, privileged: true
+  config.vm.provision "Disabling taskbar clock ...", type: "shell", path: "../shared/shell/DisableTaskbarClock.ps1", privileged: true
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
     choco source add -n=auto-install -s"c:\\auto-install" --priority=5
 
@@ -76,34 +85,34 @@ if ($validExitCodes -contains $exitCode) {
 Exit $exitCode
 SCRIPT
 
-  config.vm.provider :virtualbox do |v, override|
-    v.gui = true
-    v.customize ["modifyvm", :id, "--memory", "4096"]
-    v.customize ["modifyvm", :id, "--cpus", "1"]
-    v.customize ["modifyvm", :id, "--vram", 128]
-    v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
-    v.customize ["modifyvm", :id, "--audio", "none"]
-    v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
-    v.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
-    v.customize ["modifyvm", :id, "--usb", "off"]
-    v.linked_clone = true if Vagrant::VERSION >= '1.8.0'
+  config.vm.provision :shell, :inline => $packageTestScript, privileged: true
+
+  config.vm.provider :virtualbox do |virtualbox, override|
+    virtualbox.gui = true
+    virtualbox.customize ["modifyvm", :id, "--memory", memory]
+    virtualbox.customize ["modifyvm", :id, "--cpus", cpu]
+    virtualbox.customize ["modifyvm", :id, "--vram", 128]
+    virtualbox.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    virtualbox.customize ["modifyvm", :id, "--audio", "none"]
+    virtualbox.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+    virtualbox.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
+    virtualbox.customize ["modifyvm", :id, "--usb", "off"]
+    virtualbox.linked_clone = true if Vagrant::VERSION >= '1.8.0'
 
     folder_syncs.each do |folder|
       override.vm.synced_folder folder[:local], folder[:remote]
     end
   end
 
-  config.vm.provision :shell, :inline => $packageTestScript, privileged: true
-
-  config.vm.provider :hyperv do |v, override|
+  config.vm.provider :hyperv do |hyperv, override|
     override.vm.network "public_network", bridge: "Default Switch"
 
-    v.enable_virtualization_extensions = true
-    v.maxmemory = 4096
-    v.cpus = 1
-    v.ip_address_timeout = 130
-    v.linked_clone = true
-    v.vm_integration_services = {
+    hyperv.enable_virtualization_extensions = true
+    hyperv.maxmemory = memory
+    hyperv.cpus = cpu
+    hyperv.ip_address_timeout = 130
+    hyperv.linked_clone = true
+    hyperv.vm_integration_services = {
       guest_service_interface: true,
       heartbeat: true,
       key_value_pair_exchange: true,
@@ -134,17 +143,22 @@ SCRIPT
   end # hyper-v provider
 
   config.vm.provider :libvirt do |libvirt, override|
-    libvirt.memory = 4096
+    # See https://vagrant-libvirt.github.io/vagrant-libvirt/configuration.html
+    libvirt.memory = memory
+    libvirt.cpus = cpu
 
+    #! getting shared folders from libvirt host to a windows guest is difficult and I havent
+    #! quite worked out how best to do it.
     override.vm.synced_folder '/.', '/vagrant', disabled: true
 
-    override.vm.provision "Create network share 'Share' on 'c:\\share'", type: "shell", privileged: false, inline: <<-SHELL
-      # create a network share so that we can connect and share files via a remote SMB share
-      if (-not (Test-Path -Path 'c:\\share')) {
-        New-Item -Path 'c:\\share' -ItemType Directory -Force
-      }
-      net share Share=c:\\share /grant:everyone,full
-    SHELL
+    #! I don't think we need this - C$ is shared by default
+    # override.vm.provision "Create network share 'Share' on 'c:\\share'", type: "shell", privileged: false, inline: <<-SHELL
+    #   # create a network share so that we can connect and share files via a remote SMB share
+    #   if (-not (Test-Path -Path 'c:\\share')) {
+    #     New-Item -Path 'c:\\share' -ItemType Directory -Force
+    #   }
+    #   net share Share=c:\\share /grant:everyone,full
+    # SHELL
 
     # libvirt.driver = 'kvm'
     # libvirt.connect_via_ssh = false
