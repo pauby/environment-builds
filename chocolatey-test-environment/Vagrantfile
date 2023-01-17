@@ -1,4 +1,15 @@
-﻿REQUIRED_PLUGINS = %w(vagrant-reload)
+﻿#
+# VM CONFIG
+#
+vm_config = {
+  memory: 8192,
+  cpus: 2
+}
+
+#
+# PLUGINS CHECK
+#
+REQUIRED_PLUGINS = %w(vagrant-reload)
 exit unless REQUIRED_PLUGINS.all? do |plugin|
   Vagrant.has_plugin?(plugin) || (
     puts "The #{plugin} plugin is required. Please install it with:"
@@ -7,9 +18,9 @@ exit unless REQUIRED_PLUGINS.all? do |plugin|
   )
 end
 
-memory = 4096
-cpu = 1 
-
+#
+# START
+#
 # http://docs.vagrantup.com/v2/vagrantfile/machine_settings.html
 Vagrant.configure("2") do |config|
 
@@ -21,7 +32,8 @@ Vagrant.configure("2") do |config|
 
   #config.vm.box = "chocolatey/test-environment"
   #config.vm.box_version = "2.0.0"
-  config.vm.box = "jborean93/WindowsServer2019"
+  config.vm.box = "stefanscherer/windows_10"
+  config.vm.box_version = "2018.10.03"
   config.vm.box_check_update = false
 
   config.windows.halt_timeout = 60
@@ -35,9 +47,11 @@ Vagrant.configure("2") do |config|
 
   config.vm.communicator = "winrm"
 
-  config.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true, host_ip: "127.0.0.1"
-  config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
-  config.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
+  config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true
+
+  # config.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true, host_ip: "127.0.0.1"
+  # config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
+  # config.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
 
   config.vm.provision "Preparing Windows ...", type: "shell", path: "../shared/shell/PrepareWindows.ps1", privileged: true
   installChocoArgs = "-UseLocalSource"
@@ -87,10 +101,25 @@ SCRIPT
 
   config.vm.provision :shell, :inline => $packageTestScript, privileged: true
 
+  config.vm.provider "vmware_desktop" do |v, override|
+    v.gui = true
+    v.linked_clone = true
+    v.vmx["memsize"] = vm_config[:memory]
+    v.vmx["numvcpus"] = vm_config[:cpus]
+
+    v.vmx["ethernet0.virtualDev"] = "vmxnet3"
+    v.vmx["RemoteDisplay.vnc.enabled"] = "false"
+    v.vmx["RemoteDisplay.vnc.port"] = "5900"
+    v.vmx["scsi0.virtualDev"] = "lsisas1068"
+    v.enable_vmrun_ip_lookup = false
+    v.whitelist_verified = true
+    v.vmx["hgfs.linkRootShare"] = "FALSE"
+  end
+
   config.vm.provider :virtualbox do |virtualbox, override|
     virtualbox.gui = true
-    virtualbox.customize ["modifyvm", :id, "--memory", memory]
-    virtualbox.customize ["modifyvm", :id, "--cpus", cpu]
+    virtualbox.customize ["modifyvm", :id, "--memory", vm_config['memory']]
+    virtualbox.customize ["modifyvm", :id, "--cpus", vm_config['cpus']]
     virtualbox.customize ["modifyvm", :id, "--vram", 128]
     virtualbox.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
     virtualbox.customize ["modifyvm", :id, "--audio", "none"]
@@ -108,8 +137,8 @@ SCRIPT
     override.vm.network "public_network", bridge: "Default Switch"
 
     hyperv.enable_virtualization_extensions = true
-    hyperv.maxmemory = memory
-    hyperv.cpus = cpu
+    hyperv.maxmemory = vm_config['memory']
+    hyperv.cpus = vm_config['cpus']
     hyperv.ip_address_timeout = 130
     hyperv.linked_clone = true
     hyperv.vm_integration_services = {
@@ -144,8 +173,8 @@ SCRIPT
 
   config.vm.provider :libvirt do |libvirt, override|
     # See https://vagrant-libvirt.github.io/vagrant-libvirt/configuration.html
-    libvirt.memory = memory
-    libvirt.cpus = cpu
+    libvirt.memory = vm_config["memory"]
+    libvirt.cpus = vm_config["cpus"]
 
     #! getting shared folders from libvirt host to a windows guest is difficult and I havent
     #! quite worked out how best to do it.
