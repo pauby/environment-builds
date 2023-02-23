@@ -22,7 +22,7 @@ end
 # START
 #
 # http://docs.vagrantup.com/v2/vagrantfile/machine_settings.html
-Vagrant.configure("2") do |config|
+Vagrant.configure("2") do |cfg|
 
   folder_syncs = [
     { local: 'auto-install', remote: '/auto-install' },
@@ -30,44 +30,49 @@ Vagrant.configure("2") do |config|
     { local: '../shared/shell',              remote: '/shell' }
   ]
 
-  config.vm.box = "stefanscherer/windows_10"
-#  config.vm.box_version = "2018.10.03"
+  cfg.vm.box = "stefanscherer/windows_10"
+#  cfg.vm.box_version = "2018.10.03"
 
-
-  config.vm.provider "vmware_desktop" do |v, override|
+  cfg.vm.provider "vmware_desktop" do |v, override|
     override.vm.box = "my-chocolatey-test-environment"
     override.vm.box_version = ''
   end
 
-  config.vm.box_check_update = false
+  cfg.vm.box_check_update = false
 
-  config.windows.halt_timeout = 60
-  config.winrm.retry_limit = 30
-  config.winrm.retry_delay = 10
+  cfg.windows.halt_timeout = 60
+  # Leave this here. But see this comment https://github.com/hashicorp/vagrant/issues/6430#issuecomment-230755910
+  #cfg.winrm.retry_limit = 30
+  #cfg.winrm.retry_delay = 10
+  cfg.winrm.username = "vagrant"
+  cfg.winrm.password = "vagrant"
+  cfg.vm.guest = :windows
+  cfg.vm.communicator = "winrm"
+  
+  # See this for explanation https://www.rubydoc.info/gems/vagrant-windows/
+  # For the WinRM service to work in Windows 7, the network profile has to be changed from Public to Work
+  # Ensure that all netwoirks are set to private
+  # cfg.windows.set_work_network = true
+  cfg.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true
+  # cfg.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true, host_ip: "127.0.0.1"
+  # cfg.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
+  # cfg.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
 
-  config.winrm.username = "vagrant"
-  config.winrm.password = "vagrant"
-
-  config.vm.guest = :windows
-
-  config.vm.communicator = "winrm"
-
-  config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true
-
-  # config.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true, host_ip: "127.0.0.1"
-  # config.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true, host_ip: "127.0.0.1"
-  # config.vm.network :forwarded_port, guest: 22, host: 2222, id: "ssh", auto_correct: true, host_ip: "127.0.0.1"
-
-  config.vm.provision "Preparing Windows ...", type: "shell", path: "../shared/shell/PrepareWindows.ps1", privileged: true
+  #
+  # PROVISIONERS
+  # 
+  # All PowerShell scripts / executions must have privileged: true or they will error on provisioning
+  # See https://github.com/hashicorp/vagrant/issues/9138
+  cfg.vm.provision "Preparing Windows ...", type: "shell", path: "../shared/shell/PrepareWindows.ps1", privileged: true
   installChocoArgs = "-UseLocalSource"
-  config.vm.provider :libvirt do |libvirt|
+  cfg.vm.provider :libvirt do |libvirt|
     if ENV['INTERNAL_CHOCOLATEY_PACKAGES_PATH'] != nil
       installChocoArgs = "-UseLocalSource -LocalSourcePath #{ENV['INTERNAL_CHOCOLATEY_PACKAGES_PATH']}"
     end
   end
-  config.vm.provision "Installing and configuring Chocolatey CLI ...", type: "shell", path: "../shared/shell/InstallChocolatey.ps1", args: installChocoArgs, privileged: true
-  config.vm.provision "Disabling taskbar clock ...", type: "shell", path: "../shared/shell/DisableTaskbarClock.ps1", privileged: true
-  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+  cfg.vm.provision "Installing and configuring Chocolatey CLI ...", type: "shell", path: "../shared/shell/InstallChocolatey.ps1", args: installChocoArgs, privileged: true
+  cfg.vm.provision "Disabling taskbar clock ...", type: "shell", path: "../shared/shell/DisableTaskbarClock.ps1", privileged: true
+  cfg.vm.provision "shell", privileged: false, inline: <<-SHELL
     choco source add -n=auto-install -s"c:\\auto-install" --priority=5
 
     # To set the background to #004568 we need to also blank the default wallpaper value
@@ -75,10 +80,10 @@ Vagrant.configure("2") do |config|
     Set-ItemProperty -Path 'HKCU:Control Panel\\Colors' -Name 'Background' -Value '9 59 134'
     Set-ItemProperty -Path 'HKCU:Control Panel\\Desktop' -Name 'Wallpaper' -Value ''
   SHELL
-  #config.vm.provision :shell, :path => "../shared/shell/InstallBGInfo.ps1", privileged: true
+  #cfg.vm.provision :shell, :path => "../shared/shell/InstallBGInfo.ps1", privileged: true
 
   # When choco installs it indicates it requires a reboot so to start with a clean VM, reboot after all the setup is done
-  #config.vm.provision :reload
+  #cfg.vm.provision :reload
 
 $packageTestScript = <<SCRIPT
 setx.exe trigger 1  # run arbitrary win32 application so LASTEXITCODE is 0
@@ -104,14 +109,18 @@ if ($validExitCodes -contains $exitCode) {
 Exit $exitCode
 SCRIPT
 
-  config.vm.provision :shell, :inline => $packageTestScript, privileged: true
+  cfg.vm.provision :shell, :inline => $packageTestScript, privileged: true
 
-  config.vm.provider "vmware_desktop" do |v, override|
+  #
+  # PROVIDERS
+  #
+
+  # VMware Workstation or Fusion
+  cfg.vm.provider "vmware_desktop" do |v, override|
     v.gui = false
     v.linked_clone = true
     v.vmx["memsize"] = vm_config[:memory]
     v.vmx["numvcpus"] = vm_config[:cpus]
-
     v.vmx["ethernet0.virtualDev"] = "vmxnet3"
     v.vmx["RemoteDisplay.vnc.enabled"] = "false"
     v.vmx["RemoteDisplay.vnc.port"] = "5900"
@@ -121,32 +130,37 @@ SCRIPT
     v.vmx["hgfs.linkRootShare"] = "FALSE"
   end
 
-  config.vm.provider :virtualbox do |virtualbox, override|
-    virtualbox.gui = true
-    virtualbox.customize ["modifyvm", :id, "--memory", vm_config['memory']]
-    virtualbox.customize ["modifyvm", :id, "--cpus", vm_config['cpus']]
-    virtualbox.customize ["modifyvm", :id, "--vram", 128]
-    virtualbox.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
-    virtualbox.customize ["modifyvm", :id, "--audio", "none"]
-    virtualbox.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
-    virtualbox.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
-    virtualbox.customize ["modifyvm", :id, "--usb", "off"]
-    virtualbox.linked_clone = true if Vagrant::VERSION >= '1.8.0'
+  # Virtualbox
+  cfg.vm.provider :virtualbox do |v, override|
+    v.gui = false
+    v.customize ["modifyvm", :id, "--memory", vm_config['memory']]
+    v.customize ["modifyvm", :id, "--cpus", vm_config['cpus']]
+    v.customize ["modifyvm", :id, "--vram", 128]
+    v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    v.customize ["modifyvm", :id, "--audio", "none"]
+    v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+    v.customize ["modifyvm", :id, "--draganddrop", "hosttoguest"]
+    v.customize ["modifyvm", :id, "--usb", "off"]
+    v.customize ["modifyvm", :id, "--nested-hw-virt", "off"]  # nested virtualization
+    v.linked_clone = true if Vagrant::VERSION >= '1.8.0'
 
     folder_syncs.each do |folder|
       override.vm.synced_folder folder[:local], folder[:remote]
     end
   end
 
-  config.vm.provider :hyperv do |hyperv, override|
+  # Hyper-V
+  # https://www.vagrantup.com/docs/hyperv/cfguration.html
+  # https://technet.microsoft.com/en-us/library/dn798297(v=ws.11).aspx
+  cfg.vm.provider :hyperv do |v, override|
     override.vm.network "public_network", bridge: "Default Switch"
 
-    hyperv.enable_virtualization_extensions = true
-    hyperv.maxmemory = vm_config['memory']
-    hyperv.cpus = vm_config['cpus']
-    hyperv.ip_address_timeout = 130
-    hyperv.linked_clone = true
-    hyperv.vm_integration_services = {
+    v.enable_virtualization_extensions = true
+    v.maxmemory = vm_config['memory']
+    v.cpus = vm_config['cpus']
+    v.ip_address_timeout = 130
+    v.linked_clone = true
+    v.vm_integration_services = {
       guest_service_interface: true,
       heartbeat: true,
       key_value_pair_exchange: true,
@@ -176,10 +190,12 @@ SCRIPT
       override.vm.provision "Stop SMB Idle Disconnects", type: 'shell', run: 'once', privileged: true, inline: 'net config server /autodisconnect:-1'
   end # hyper-v provider
 
-  config.vm.provider :libvirt do |libvirt, override|
+  # libvirt
+  # This is a WIP as I no longer use it much
+  cfg.vm.provider :libvirt do |v, override|
     # See https://vagrant-libvirt.github.io/vagrant-libvirt/configuration.html
-    libvirt.memory = vm_config["memory"]
-    libvirt.cpus = vm_config["cpus"]
+    v.memory = vm_config["memory"]
+    v.cpus = vm_config["cpus"]
 
     #! getting shared folders from libvirt host to a windows guest is difficult and I havent
     #! quite worked out how best to do it.
@@ -194,22 +210,21 @@ SCRIPT
     #   net share Share=c:\\share /grant:everyone,full
     # SHELL
 
-    # libvirt.driver = 'kvm'
-    # libvirt.connect_via_ssh = false
-    # libvirt.username = 'root'
-    # libvirt.storage_pool_name = 'default'
+    # v.driver = 'kvm'
+    # v.connect_via_ssh = false
+    # v.username = 'root'
+    # v.storage_pool_name = 'default'
 
     # # Enable Hyper-V enlightments: https://blog.wikichoon.com/2014/07/enabling-hyper-v-enlightenments-with-kvm.html
     # # Also see https://github.com/kubevirt/kubevirt/issues/1919#issue-396952226 
-    # libvirt.hyperv_feature :name => 'relaxed',  :state => 'on'
-    # libvirt.hyperv_feature :name => 'vapic',    :state => 'on'
-    # libvirt.hyperv_feature :name => 'stimer',   :state => 'on'
-    # libvirt.hyperv_feature :name => 'synic',    :state => 'on'
-    # libvirt.hyperv_feature :name => 'vapic',    :state => 'on'
-    # libvirt.hyperv_feature :name => 'vpindex',  :state => 'on'
-    # libvirt.hyperv_feature :name => 'frequencies',  :state => 'on'
-    # libvirt.hyperv_feature :name => 'reenlightenment',  :state => 'on'
-    # libvirt.hyperv_feature :name => 'tlbflush',  :state => 'on'
-
+    # v.hyperv_feature :name => 'relaxed',  :state => 'on'
+    # v.hyperv_feature :name => 'vapic',    :state => 'on'
+    # v.hyperv_feature :name => 'stimer',   :state => 'on'
+    # v.hyperv_feature :name => 'synic',    :state => 'on'
+    # v.hyperv_feature :name => 'vapic',    :state => 'on'
+    # v.hyperv_feature :name => 'vpindex',  :state => 'on'
+    # v.hyperv_feature :name => 'frequencies',  :state => 'on'
+    # v.hyperv_feature :name => 'reenlightenment',  :state => 'on'
+    # v.hyperv_feature :name => 'tlbflush',  :state => 'on'
   end # libvirt provider
 end
